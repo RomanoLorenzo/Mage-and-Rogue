@@ -15,6 +15,8 @@ vivado.log
 /hw/mage/packages/agu_pkg.sv
 /hw/mage/packages/xbar_pkg.sv
 /hw/mage/access/age.sv
+/hw/mage/execute/pe/streaming/pe_*.sv
+/hw/mage/execute/pe/streaming/fu/fu_*.sv
 /hw/mage/packages/pea_pkg.sv
 /hw/mage/configuration/peripheral_regs.sv
 /hw/mage/configuration/mage_reg_top.sv
@@ -32,3 +34,5 @@ vivado.log
 /sw/mage_regs.h
 /sw/mage_x_heep.h
 /sw/mage_params.h
+
+mage-stream.core

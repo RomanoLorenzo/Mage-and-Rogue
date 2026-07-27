@@ -178,7 +178,10 @@ package pea_pkg;
     CMULADD   = 5'b11000,
     CADDDIV   = 5'b11001,
     MULCARSH  = 5'b11010,
-    CLSHSUB   = 5'b11011
+    CLSHSUB   = 5'b11011,
+    BPSEL     = 5'b11100,
+    CMULADD_PW  = 5'b11101,
+    CLIP      = 5'b11110
   } fu_instr_t;
 %elif gemm_computation == 1:
   typedef enum logic[LOG_N_OPERATIONS-1:0]{

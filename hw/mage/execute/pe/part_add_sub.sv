@@ -226,7 +226,6 @@ module part_add_sub
   // 16-bit and 8-bit Adders for Vector Mode Final Accumulation //
   ////////////////////////////////////////////////////////////////
 
-
   // partitioned 16-bit adder for:
   // vec16 mode final addition in the accumulation process
   // first vec8 addtion in the accumulation process

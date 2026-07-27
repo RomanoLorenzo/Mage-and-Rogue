@@ -369,6 +369,78 @@
         }
     },
 %if streaming_cgra == 1:
+
+
+    % for level, pes in enumerate(bst_pes):
+    <%  n_bp = 2 ** level %>\
+    %   for pe_id in pes:
+    %     if n_bp == 1:
+    { name: "PE_${pe_id}_BST_${level}_BP",
+        desc: "PEs BPs",
+        swaccess: "rw",
+        hwaccess: "hro",
+        fields: [
+        { bits: "31:0", 
+          name: "BP",
+          desc: "BP for PE" 
+        },
+        ],
+    },
+    %     else:
+    { multireg:
+      { name: "PE_${pe_id}_BST_${level}_BP",
+        desc: "PEs BPs",
+        count : "${n_bp}",
+        cname: "PE_BP",
+        swaccess: "rw",
+        hwaccess: "hro",
+        fields: [
+        { bits: "31:0", 
+          name: "BP",
+          desc: "BP for PE" 
+        },
+        ],
+      }
+    }
+    %     endif
+    %   endfor
+    % endfor
+
+    % for pe_id, n_m, n_q in zip(coeff_pes, num_m_coeffs, num_q_coeffs):
+    { multireg:
+      { name: "PE_${pe_id}_M_COEFFS",
+        desc: "M-Coefficients for PE ${pe_id}",
+        count : "${n_m}",
+        cname: "PE_M_COEFF",
+        swaccess: "rw",
+        hwaccess: "hro",
+        fields: [
+        { bits: "31:0",
+          name: "COEFF",
+          desc: "M-Coefficient for PE ${pe_id}"
+        },
+        ],
+      }
+    },
+    %   if n_q > 0:
+    { multireg:
+      { name: "PE_${pe_id}_Q_COEFFS",
+        desc: "Q-Coefficients for PE ${pe_id}",
+        count : "${n_q}",
+        cname: "PE_Q_COEFF",
+        swaccess: "rw",
+        hwaccess: "hro",
+        fields: [
+        { bits: "31:0",
+          name: "COEFF",
+          desc: "Q-Coefficient for PE ${pe_id}"
+        },
+        ],
+      }
+    },
+    %   endif
+    % endfor
+
     { multireg:
         { name: "PEA_RF",
         desc: "PEs RF",

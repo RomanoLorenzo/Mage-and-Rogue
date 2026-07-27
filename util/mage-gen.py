@@ -23,8 +23,364 @@ import math
 # Compile a regex to trim trailing whitespaces on lines.
 re_trailws = re.compile(r'[ \t\r]+$', re.MULTILINE)
 
+# Matches the _m<N>_q<M> coeff suffix in PE/FU variant names, e.g. pe_s_full_gemm_m16_q0
+_COEFF_RE = re.compile(r'^(.+)_m(\d+)_q(\d+)$')
+
 def string2int(hex_json_string):
     return (hex_json_string.split('x')[1]).split(',')[0]
+
+# Full property table for every known streaming PE variant.
+# Keys: fu_module, fu_inst, has_part_vec_mode, has_div_support, div_is_pipelined, description
+PE_VARIANT_TABLE = {
+    "pe_s_full_gemm": {
+        "fu_module": "fu_s_full_gemm",
+        "fu_inst":   "fu_wrapper_i",
+        "has_part_vec_mode": False,
+        "has_div_support":   False,
+        "div_is_pipelined":  False,
+        "description": "PE for streaming mode supporting int32 computation of classic gemm-related operations",
+        "bst_lvl":   None,
+        "coeff":   False,
+    },
+    "pe_s_full_gemm_bst_1": {
+        "fu_module": "fu_s_full_gemm_bst_1",
+        "fu_inst":   "fu_wrapper_i",
+        "has_part_vec_mode": False,
+        "has_div_support":   False,
+        "bst_lvl":   1,
+        "div_is_pipelined":  False,
+        "description": "PE for streaming mode supporting int32 computation of classic gemm-related operations",
+        "coeff":   False,
+    },
+    "pe_s_full_gemm_bst_2": {
+        "fu_module": "fu_s_full_gemm_bst_2",
+        "fu_inst":   "fu_wrapper_i",
+        "has_part_vec_mode": False,
+        "has_div_support":   False,
+        "bst_lvl":   2,
+        "div_is_pipelined":  False,
+        "description": "PE for streaming mode supporting int32 computation of classic gemm-related operations",
+        "coeff":   False,
+    },
+    "pe_s_part_gemm_mul_bst_1": {
+        "fu_module": "fu_s_part_gemm_mul_bst_1",
+        "fu_inst":   "fu_wrapper_i",
+        "has_part_vec_mode": True,
+        "has_div_support":   False,
+        "div_is_pipelined":  False,
+        "description": "PE for streaming mode supporting int32/int16/int8 mul and int32 gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   1
+    },
+    "pe_s_part_gemm_add_bst_3": {
+        "fu_module": "fu_s_part_gemm_add_bst_3",
+        "fu_inst":   "fu_wrapper_i",
+        "has_part_vec_mode": True,
+        "has_div_support":   False,
+        "div_is_pipelined":  False,
+        "description": "PE for streaming mode supporting int32/int16/int8 add and int32 gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   3
+    },
+    "pe_s_part_gemm_add_bst_2": {
+        "fu_module": "fu_s_part_gemm_add_bst_2",
+        "fu_inst":   "fu_wrapper_i",
+        "has_part_vec_mode": True,
+        "has_div_support":   False,
+        "div_is_pipelined":  False,
+        "description": "PE for streaming mode supporting int32/int16/int8 add and int32 gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   2
+    },
+    "pe_s_part_mul_act_serdiv_bst_0": {
+        "fu_module": "fu_s_part_mul_act_serdiv_bst_0",
+        "fu_inst":   "fu_s_part_mul_act_serdiv_i",
+        "has_part_vec_mode": True,
+        "has_div_support":   True,
+        "div_is_pipelined":  False,
+        "description": "PE for streaming mode supporting int32/int16/int8 mul, gemm-related operations and activations with serial divider",
+        "coeff":   False,
+        "bst_lvl":   0
+    },
+    "pe_s_part_mul_act_pipediv_bst_0": {
+        "fu_module": "fu_s_part_mul_act_pipediv_bst_0",
+        "fu_inst":   "fu_s_part_mul_act_pipediv_i",
+        "has_part_vec_mode": True,
+        "has_div_support":   True,
+        "div_is_pipelined":  True,
+        "description": "PE for streaming mode supporting int32/int16/int8 mul, gemm-related operations and activations with pipelined divider",
+        "coeff":   False,
+        "bst_lvl":   0
+    },
+    "pe_s_full_act_serdiv": {
+        "fu_module": "fu_s_full_act_serdiv",
+        "fu_inst":   "fu_wrapper_div_i",
+        "has_part_vec_mode": False,
+        "has_div_support":   True,
+        "div_is_pipelined":  False,
+        "description": "PE for streaming mode supporting int32 gemm-related operations and activations with serial divider",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "pe_s_full_act_pipediv": {
+        "fu_module": "fu_s_full_act_pipediv",
+        "fu_inst":   "fu_wrapper_div_pipe_i",
+        "has_part_vec_mode": False,
+        "has_div_support":   True,
+        "div_is_pipelined":  True,
+        "description": "PE for streaming mode supporting int32 gemm-related operations and activations with pipelined divider",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "pe_s_part_gemm_mul": {
+        "fu_module": "fu_s_part_gemm_mul",
+        "fu_inst":   "fu_wrapper_i",
+        "has_part_vec_mode": True,
+        "has_div_support":   False,
+        "div_is_pipelined":  False,
+        "description": "PE for streaming mode supporting int32/int16/int8 mul and int32 gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "pe_s_part_gemm_add": {
+        "fu_module": "fu_s_part_gemm_add",
+        "fu_inst":   "fu_wrapper_i",
+        "has_part_vec_mode": True,
+        "has_div_support":   False,
+        "div_is_pipelined":  False,
+        "description": "PE for streaming mode supporting int32/int16/int8 add and int32 gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "pe_s_part_mul_act_serdiv": {
+        "fu_module": "fu_s_part_mul_act_serdiv",
+        "fu_inst":   "fu_s_part_mul_act_serdiv_i",
+        "has_part_vec_mode": True,
+        "has_div_support":   True,
+        "div_is_pipelined":  False,
+        "description": "PE for streaming mode supporting int32/int16/int8 mul, gemm-related operations and activations with serial divider",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "pe_s_part_mul_act_pipediv": {
+        "fu_module": "fu_s_part_mul_act_pipediv",
+        "fu_inst":   "fu_s_part_mul_act_pipediv_i",
+        "has_part_vec_mode": True,
+        "has_div_support":   True,
+        "div_is_pipelined":  True,
+        "description": "PE for streaming mode supporting int32/int16/int8 mul, gemm-related operations and activations with pipelined divider",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "pe_s_part_add_act_serdiv": {
+        "fu_module": "fu_s_part_add_act_serdiv",
+        "fu_inst":   "fu_s_part_add_act_serdiv_i",
+        "has_part_vec_mode": True,
+        "has_div_support":   True,
+        "div_is_pipelined":  False,
+        "description": "PE for streaming mode supporting int32/int16/int8 add, gemm-related operations and activations with serial divider",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "pe_s_part_add_act_pipediv": {
+        "fu_module": "fu_s_part_add_act_pipediv",
+        "fu_inst":   "fu_s_part_add_act_pipediv_i",
+        "has_part_vec_mode": True,
+        "has_div_support":   True,
+        "div_is_pipelined":  True,
+        "description": "PE for streaming mode supporting int32/int16/int8 add, gemm-related operations and activations with pipelined divider",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+}
+
+
+# Full property table for every known streaming FU variant.
+# Keys: arith_type ('full'|'part_mul'|'part_add'), divider_type ('none'|'serdiv'|'pipediv'), description
+FU_VARIANT_TABLE = {
+    "fu_s_full_gemm": {
+        "arith_type":    "full",
+        "divider_type":  "none",
+        "description": "FU for streaming mode supporting int32 computation of classic gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "fu_s_full_gemm_bst_1": {
+        "arith_type":    "full",
+        "divider_type":  "none",
+        "description": "FU for streaming mode supporting int32 computation of classic gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   1,
+    },
+    "fu_s_full_gemm_bst_2": {
+        "arith_type":    "full",
+        "divider_type":  "none",
+        "description": "FU for streaming mode supporting int32 computation of classic gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   2,
+    },
+    "fu_s_part_gemm_mul_bst_1": {
+        "arith_type":    "part_mul",
+        "divider_type":  "none",
+        "description": "FU for streaming mode supporting int32/int16/int8 mul and int32 computation of classic gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   1
+    },
+    "fu_s_part_gemm_add_bst_3": {
+        "arith_type":    "part_add",
+        "divider_type":  "none",
+        "description": "FU for streaming mode supporting int32/int16/int8 add and int32 computation of classic gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   3
+    },
+    "fu_s_part_gemm_add_bst_2": {
+        "arith_type":    "part_add",
+        "divider_type":  "none",
+        "description": "FU for streaming mode supporting int32/int16/int8 add and int32 computation of classic gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   2
+    },
+    "fu_s_part_mul_act_serdiv_bst_0": {
+        "arith_type":    "part_mul",
+        "divider_type":  "serdiv",
+        "description": "FU for streaming mode supporting int32/int16/int8 mul and int32 gemm-related operations and activations with pipelined divider",
+        "coeff":   False,
+        "bst_lvl":   0
+    },
+    "fu_s_part_mul_act_pipediv_bst_0": {
+        "arith_type":    "part_mul",
+        "divider_type":  "pipediv",
+        "description": "FU for streaming mode supporting int32/int16/int8 mul and int32 gemm-related operations and activations with pipelined divider",
+        "coeff":   False,
+        "bst_lvl":   0
+    },
+
+
+    "fu_s_full_act_serdiv": {
+        "arith_type":    "full",
+        "divider_type":  "serdiv",
+        "description": "FU for streaming mode supporting int32 computation of classic gemm-related operations and activations with serial divider",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "fu_s_full_act_pipediv": {
+        "arith_type":    "full",
+        "divider_type":  "pipediv",
+        "description": "FU for streaming mode supporting int32 computation of classic gemm-related operations and activations with pipelined divider",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "fu_s_part_gemm_mul": {
+        "arith_type":    "part_mul",
+        "divider_type":  "none",
+        "description": "FU for streaming mode supporting int32/int16/int8 mul and int32 computation of classic gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "fu_s_part_gemm_add": {
+        "arith_type":    "part_add",
+        "divider_type":  "none",
+        "description": "FU for streaming mode supporting int32/int16/int8 add and int32 computation of classic gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "fu_s_part_mul_act_serdiv": {
+        "arith_type":    "part_mul",
+        "divider_type":  "serdiv",
+        "description": "FU for streaming mode supporting int32/int16/int8 mul and int32 gemm-related operations and activations with serial divider",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "fu_s_part_mul_act_pipediv": {
+        "arith_type":    "part_mul",
+        "divider_type":  "pipediv",
+        "description": "FU for streaming mode supporting int32/int16/int8 mul and int32 gemm-related operations and activations with pipelined divider",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+    "fu_s_part_add_act_serdiv": {
+        "arith_type":    "part_add",
+        "divider_type":  "serdiv",
+        "description": "FU for streaming mode supporting int32/int16/int8 add and int32 gemm-related operations and activations with serial divider",
+        "coeff":   False,
+        "bst_lvl":   None,
+        },
+    "fu_s_part_add_act_pipediv": {
+        "arith_type":    "part_add",
+        "divider_type":  "pipediv",
+        "description": "FU for streaming mode supporting int32/int16/int8 add and int32 gemm-related operations and activations with pipelined divider",
+        "coeff":   False,
+        "bst_lvl":   None,
+    },
+}
+
+
+def write_fu_variants(tpl_path, outdir, fu_variant_names, **cfg_kwargs):
+    """Render fu_s.sv.tpl once per variant name listed in fu_variant_names."""
+    tpl_path = pathlib.Path(tpl_path).absolute()
+    if not tpl_path.exists():
+        raise FileNotFoundError(f"FU template not found: {tpl_path}")
+    tpl = Template(filename=str(tpl_path))
+    for name in fu_variant_names:
+        cm = _COEFF_RE.match(name)
+        if cm:
+            base, n_m, n_q = cm.group(1), int(cm.group(2)), int(cm.group(3))
+            if base not in FU_VARIANT_TABLE:
+                logging.warning(f"Unknown base FU variant '{base}' in '{name}', skipping")
+                continue
+            props = {**cfg_kwargs, **FU_VARIANT_TABLE[base]}
+            props['coeff'] = True
+            props['n_m_coeffs'] = n_m
+            props['n_q_coeffs'] = n_q
+        else:
+            if name not in FU_VARIANT_TABLE:
+                logging.warning(f"Unknown FU variant '{name}', skipping")
+                continue
+            props = {**cfg_kwargs, **FU_VARIANT_TABLE[name]}
+            props['n_m_coeffs'] = 0
+            props['n_q_coeffs'] = 0
+        props["name"] = name
+        outfile = outdir / f"{name}.sv"
+        with open(outfile, "w") as f:
+            code = tpl.render_unicode(**props)
+            code = re_trailws.sub("", code)
+            f.write(code)
+        logging.info(f"Generated {outfile}")
+
+
+def write_pe_variants(tpl_path, outdir, pe_variant_names, **cfg_kwargs):
+    """Render pe_s.sv.tpl once per variant name listed in pe_variant_names."""
+    tpl_path = pathlib.Path(tpl_path).absolute()
+    if not tpl_path.exists():
+        raise FileNotFoundError(f"PE template not found: {tpl_path}")
+    tpl = Template(filename=str(tpl_path))
+    for name in pe_variant_names:
+        cm = _COEFF_RE.match(name)
+        if cm:
+            base, n_m, n_q = cm.group(1), int(cm.group(2)), int(cm.group(3))
+            if base not in PE_VARIANT_TABLE:
+                logging.warning(f"Unknown base PE variant '{base}' in '{name}', skipping")
+                continue
+            props = {**cfg_kwargs, **PE_VARIANT_TABLE[base]}
+            props['coeff'] = True
+            props['n_m_coeffs'] = n_m
+            props['n_q_coeffs'] = n_q
+            props['fu_module'] = f"{PE_VARIANT_TABLE[base]['fu_module']}_m{n_m}_q{n_q}"
+        else:
+            if name not in PE_VARIANT_TABLE:
+                logging.warning(f"Unknown PE variant '{name}', skipping")
+                continue
+            props = {**cfg_kwargs, **PE_VARIANT_TABLE[name]}
+            props['n_m_coeffs'] = 0
+            props['n_q_coeffs'] = 0
+        props["name"] = name
+        outfile = outdir / f"{name}.sv"
+        with open(outfile, "w") as f:
+            code = tpl.render_unicode(**props)
+            code = re_trailws.sub("", code)
+            f.write(code)
+        logging.info(f"Generated {outfile}")
+
 
 def write_template(tpl_path, outdir, outfile, **kwargs):
     if tpl_path:
@@ -97,6 +453,16 @@ def main():
                         metavar="TPL_SV",
                         help="Name of SystemVerilog template for your module (output)")
 
+    parser.add_argument("--pe-sv",
+                        metavar="PE_TPL_SV",
+                        help="Mako template for streaming PE modules (pe_s.sv.tpl); "
+                             "generates one .sv per entry in pe_variants from the config")
+
+    parser.add_argument("--fu-sv",
+                        metavar="FU_TPL_SV",
+                        help="Mako template for streaming FU modules (fu_s.sv.tpl); "
+                             "generates one .sv per entry in fu_variants from the config")
+
     
     parser.add_argument(
         "--mage_cfg",
@@ -126,6 +492,13 @@ def main():
         except ValueError as exc:
             raise SystemExit(sys.exc_info()[1]) from exc
 
+
+    def _collect_bst_pes(sp):
+        result, level = [], 0
+        while f'bst_{level}_pes' in sp:
+            result.append(sp[f'bst_{level}_pes'])
+            level += 1
+        return result
 
     kwargs = {
         "dae_cgra"                         : cfg['dae_cgra'],
@@ -169,11 +542,17 @@ def main():
         "in_stream_xbar"                   : cfg['streaming_params']['in_stream_xbar'],
         "out_stream_xbar"                  : cfg['streaming_params']['out_stream_xbar'],
         "div_pes"                          : cfg['streaming_params']['div_pes'],
+        "bst_pes"                          : _collect_bst_pes(cfg['streaming_params']),
+        "coeff_pes"                        : cfg['streaming_params'].get('coeff_pes', []),
+        "num_m_coeffs"                     : cfg['streaming_params'].get('num_m_coeffs', []),
+        "num_q_coeffs"                     : cfg['streaming_params'].get('num_q_coeffs', []),
         "part_add_pes"                     : cfg['streaming_params']['part_add_pes'],
         "part_mul_pes"                     : cfg['streaming_params']['part_mul_pes'],
         "is_div_pipe"                      : cfg['streaming_params']['is_div_pipe'],
         "in_stream_dma_ch_placement"       : cfg['streaming_params']['in_stream_dma_ch_placement'],
         "out_stream_pea_dout_placement"    : cfg['streaming_params']['out_stream_pea_dout_placement'],
+        "pe_variants"                      : cfg['streaming_params'].get('pe_variants', []),
+        "fu_variants"                      : cfg['streaming_params'].get('fu_variants', []),
     }
 
     ###########
@@ -184,6 +563,12 @@ def main():
 
     if args.tpl_sv != None:
         write_template(args.tpl_sv, outdir, outfile, **kwargs)
+
+    if args.pe_sv is not None:
+        write_pe_variants(args.pe_sv, outdir, kwargs["pe_variants"], **kwargs)
+
+    if args.fu_sv is not None:
+        write_fu_variants(args.fu_sv, outdir, kwargs["fu_variants"], **kwargs)
 
 if __name__ == "__main__":
     main()

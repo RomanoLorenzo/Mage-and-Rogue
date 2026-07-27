@@ -27,7 +27,7 @@ module pea
     // Input data from internal SpM
     input  logic   [N_IN_PEA-1:0][N_BITS-1:0]                       pea_data_i,
     // Selection of PEA outputs for each row
-    input  logic   [N_OUT_PEA-1:0][ ${max(m.log(n_pea_cols), 2)}-1:0]                      sel_output_i,
+    input  logic   [N_OUT_PEA-1:0][ ${max(m.log(n_pea_cols), 2)}-1:0] sel_output_i,
     // PEA output data
     output logic   [N_OUT_PEA-1:0][N_BITS-1:0]                      pea_data_o,
 %endif
@@ -49,6 +49,23 @@ module pea
     output  logic   [        N-1:0][     M-1:0]                    reg_pea_rf_de_o,
     input logic                                                    mage_done_i,
     input logic [M-1:0]                                            stream_intf_ready_i,
+    % for level, pes in enumerate(bst_pes):
+    <%  n_bp = 2 ** level %>\
+    %   for pe_id in pes:
+    %     if n_bp == 1:
+        input logic            [N_BITS-1:0] reg_pe_${pe_id}_bst_${level}_bp_i,
+    %     else:
+        input logic [${n_bp-1}:0][N_BITS-1:0] reg_pe_${pe_id}_bst_${level}_bp_i,
+    %     endif
+    %   endfor
+    % endfor
+    % for pe_id, n_m, n_q in zip(coeff_pes, num_m_coeffs, num_q_coeffs):
+        input logic [${n_m}-1:0][N_BITS-1:0] reg_pe_${pe_id}_m_coeffs_i,
+    %   if n_q > 0:
+        input logic [${n_q}-1:0][N_BITS-1:0] reg_pe_${pe_id}_q_coeffs_i,
+    %   endif
+    % endfor
+
 %endif
     // Instruction word
     input  logic   [        N-1:0][     M-1:0][N_CFG_BITS_PE-1:0]   ctrl_pea_i,
@@ -444,25 +461,40 @@ logic out_delay_op_valid${r}${c};
   %for r in range(n_pea_rows):
     %for c in range(n_pea_cols):
 
-      %if ((int(r) * int(n_pea_cols) + int(c)) in div_pes) and ((int(r) * int(n_pea_cols) + int(c)) in part_add_pes) and (is_div_pipe == 1):
-  pe_s_part_add_act_pipediv pe_s_part_add_act_pipediv_${r}${c} (
-      %elif ((int(r) * int(n_pea_cols) + int(c)) in div_pes) and ((int(r) * int(n_pea_cols) + int(c)) in part_add_pes) and (is_div_pipe == 0):
-  pe_s_part_add_act_serdiv pe_s_part_add_act_serdiv_${r}${c} (
-      %elif ((int(r) * int(n_pea_cols) + int(c)) in div_pes) and ((int(r) * int(n_pea_cols) + int(c)) in part_mul_pes) and (is_div_pipe == 1):
-  pe_s_part_mul_act_pipediv pe_s_part_mul_act_pipediv_${r}${c} (
-      %elif ((int(r) * int(n_pea_cols) + int(c)) in div_pes) and ((int(r) * int(n_pea_cols) + int(c)) in part_mul_pes) and (is_div_pipe == 0):
-  pe_s_part_mul_act_serdiv pe_s_part_mul_act_serdiv_${r}${c} (
-      %elif ((int(r) * int(n_pea_cols) + int(c)) in div_pes) and (is_div_pipe == 1):
-  pe_s_full_act_pipediv pe_s_full_act_pipediv_${r}${c} (
-      %elif ((int(r) * int(n_pea_cols) + int(c)) in div_pes) and (is_div_pipe == 0):
-  pe_s_full_act_serdiv pe_s_full_act_serdiv_${r}${c} (
-      %elif ((int(r) * int(n_pea_cols) + int(c)) in part_add_pes):
-  pe_s_part_gemm_add pe_s_gemm_part_add_${r}${c} (
-      %elif ((int(r) * int(n_pea_cols) + int(c)) in part_mul_pes):
-  pe_s_part_gemm_mul pe_s_gemm_part_mul_${r}${c} (
-      %else:
-  pe_s_full_gemm pe_s_full_gemm_${r}${c} (
-      %endif
+      <%
+        pe_flat = int(r) * int(n_pea_cols) + int(c)
+        if (pe_flat in div_pes) and (pe_flat in part_add_pes) and (is_div_pipe == 1):
+            pe_mod = "pe_s_part_add_act_pipediv"
+        elif (pe_flat in div_pes) and (pe_flat in part_add_pes) and (is_div_pipe == 0):
+            pe_mod = "pe_s_part_add_act_serdiv"
+        elif (pe_flat in div_pes) and (pe_flat in part_mul_pes) and (is_div_pipe == 1):
+            pe_mod = "pe_s_part_mul_act_pipediv"
+        elif (pe_flat in div_pes) and (pe_flat in part_mul_pes) and (is_div_pipe == 0):
+            pe_mod = "pe_s_part_mul_act_serdiv"
+        elif (pe_flat in div_pes) and (is_div_pipe == 1):
+            pe_mod = "pe_s_full_act_pipediv"
+        elif (pe_flat in div_pes) and (is_div_pipe == 0):
+            pe_mod = "pe_s_full_act_serdiv"
+        elif pe_flat in part_add_pes:
+            pe_mod = "pe_s_part_gemm_add"
+        elif pe_flat in part_mul_pes:
+            pe_mod = "pe_s_part_gemm_mul"
+        else:
+            pe_mod = "pe_s_full_gemm"
+        pe_bst_level = None
+        for bst_level, bst_pe_list in enumerate(bst_pes):
+            if pe_flat in list(bst_pe_list):
+                pe_mod = f"{pe_mod}_bst_{bst_level}"
+                pe_bst_level = bst_level
+                break
+        if pe_flat in list(coeff_pes):
+            ci = list(coeff_pes).index(pe_flat)
+            n_m = num_m_coeffs[ci]
+            n_q = num_q_coeffs[ci]
+            pe_mod = f"{pe_mod}_m{n_m}_q{n_q}"
+        pe_inst = f"{pe_mod}_{r}{c}"
+      %>
+  ${pe_mod} ${pe_inst} (
       .clk_i(clk_i),
       .rst_n_i(rst_n_i),
       .mage_done_i(mage_done_i),
@@ -482,7 +514,17 @@ logic out_delay_op_valid${r}${c};
       .delay_op_o(out_delay_op${r}${c}),
       .ctrl_pe_i(ctrl_pea_i[${r}][${c}]),
       .pe_res_o(out_data_pe${r}${c})
-  ); 
+%     if pe_bst_level is not None:
+      ,.reg_bp_i(reg_pe_${pe_flat}_bst_${pe_bst_level}_bp_i)
+%     endif
+%     if pe_flat in coeff_pes:
+<%      ci = list(coeff_pes).index(pe_flat) %>
+      ,.reg_m_coeffs_i(reg_pe_${pe_flat}_m_coeffs_i)
+%       if num_q_coeffs[ci] > 0:
+      ,.reg_q_coeffs_i(reg_pe_${pe_flat}_q_coeffs_i)
+%       endif
+%     endif
+  );
     %endfor
   %endfor
 %endif

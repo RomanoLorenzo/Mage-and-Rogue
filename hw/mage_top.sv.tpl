@@ -163,7 +163,24 @@ module mage_top
   logic [N-1:0][M-1:0][31:0] reg_rf_in_pea;
   logic [N-1:0][M-1:0][31:0] reg_rf_d_pea;
   logic [N-1:0][M-1:0]       reg_rf_de_pea;
+% for level, pes in enumerate(bst_pes):
+<%  n_bp = 2 ** level %>\
+%   for pe_id in pes:
+%     if n_bp == 1:
+  logic            [N_BITS-1:0] reg_pe_${pe_id}_bst_${level}_bp;
+%     else:
+  logic [${n_bp-1}:0][N_BITS-1:0] reg_pe_${pe_id}_bst_${level}_bp;
+%     endif
+%   endfor
+% endfor
 %endif
+
+% for pe_id, n_m, n_q in zip(coeff_pes, num_m_coeffs, num_q_coeffs):
+  logic [${n_m}-1:0][N_BITS-1:0] reg_pe_${pe_id}_m_coeffs;
+%   if n_q > 0:
+  logic [${n_q}-1:0][N_BITS-1:0] reg_pe_${pe_id}_q_coeffs;
+%   endif
+% endfor
 
   ////////////////////////////////////////////////////////////////
   //              CSR and Configuration Registers               //
@@ -224,6 +241,22 @@ module mage_top
       .reg_pea_rf_de_i(reg_rf_de_pea),
       .reg_pea_rf_d_i(reg_rf_d_pea),
       .reg_pea_rf_o(reg_rf_in_pea),
+% for level, pes in enumerate(bst_pes):
+<%  n_bp = 2 ** level %>\
+%   for pe_id in pes:
+%     if n_bp == 1:
+      .reg_pe_${pe_id}_bst_${level}_bp_o(reg_pe_${pe_id}_bst_${level}_bp),
+%     else:
+      .reg_pe_${pe_id}_bst_${level}_bp_o(reg_pe_${pe_id}_bst_${level}_bp),
+%     endif
+%   endfor
+% endfor
+% for pe_id, n_m, n_q in zip(coeff_pes, num_m_coeffs, num_q_coeffs):
+      .reg_pe_${pe_id}_m_coeffs_o(reg_pe_${pe_id}_m_coeffs),
+%   if n_q > 0:
+      .reg_pe_${pe_id}_q_coeffs_o(reg_pe_${pe_id}_q_coeffs),
+%   endif
+% endfor
   %if out_stream_xbar == 1:
       .reg_out_stream_sel_o(reg_out_stream_sel),
   %endif
@@ -325,6 +358,22 @@ module mage_top
       .stream_data_i(stream_pea_data_in),
       .pea_ready_o(pea_ready),
       .stream_intf_ready_i(stream_intf_ready),
+% for level, pes in enumerate(bst_pes):
+<%  n_bp = 2 ** level %>\
+%   for pe_id in pes:
+%     if n_bp == 1:
+    .reg_pe_${pe_id}_bst_${level}_bp_i(reg_pe_${pe_id}_bst_${level}_bp),
+%     else:
+    .reg_pe_${pe_id}_bst_${level}_bp_i(reg_pe_${pe_id}_bst_${level}_bp),
+%     endif
+%   endfor
+% endfor
+% for pe_id, n_m, n_q in zip(coeff_pes, num_m_coeffs, num_q_coeffs):
+    .reg_pe_${pe_id}_m_coeffs_i(reg_pe_${pe_id}_m_coeffs),
+%   if n_q > 0:
+    .reg_pe_${pe_id}_q_coeffs_i(reg_pe_${pe_id}_q_coeffs),
+%   endif
+% endfor
 %endif
 %if dae_cgra == 1:
       .start_d_i(start_d),

@@ -53,6 +53,8 @@
         part_add_pes : [],
         part_mul_pes : [],
         is_div_pipe: 1,
+        pe_variants : ["pe_s_full_gemm", "pe_s_full_act_pipediv"],
+        fu_variants : ["fu_s_full_gemm", "fu_s_full_act_pipediv"],
         in_stream_dma_ch_placement : [[0], [1], [2], [3]],
         out_stream_pea_dout_placement : [[0, 1], [0, 1], [2, 3], [2, 3]],
         r_fifo_synch_placement_type : "g2",

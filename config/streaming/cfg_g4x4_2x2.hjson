@@ -54,6 +54,8 @@
         part_add_pes : [],
         part_mul_pes : [],
         is_div_pipe: 1,
+        pe_variants : ["pe_s_full_gemm"],
+        fu_variants : ["fu_s_full_gemm"],
         r_fifo_synch_placement_type : "g2",
         r_fifo_synch_placement_g2 : [[0, 1], [1, 0], [2, 3], [3, 2]],
         r_fifo_synch_placement_g3 : [[0, 1, 2], [1, 0, 2], [2, 0, 1], [3, 2, 1]],
