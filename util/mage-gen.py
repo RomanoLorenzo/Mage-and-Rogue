@@ -136,7 +136,8 @@ def main():
         
         "gemm_computation"                 : cfg['gemm_computation'],
         "activation_computation"           : cfg['activation_computation'],
-        
+        "has_delay_pe"                     : cfg['has_delay_pe'],
+
         "n_pea_rows"                       : cfg['common_params']['n_pea_rows'],
         "n_pea_cols"                       : cfg['common_params']['n_pea_cols'],
         "n_neigh_pe"                       : cfg['common_params']['n_neigh_pe'],

@@ -17,6 +17,7 @@
 
     gemm_computation : 1,
     activation_computation : 0,
+    has_delay_pe : 1,
 
     common_params: {
         n_pea_rows: 5,

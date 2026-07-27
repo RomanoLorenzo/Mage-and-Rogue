@@ -48,7 +48,7 @@ module fu_dae_full_act
 
   logic [  N_BITS-1:0] lsh_op1_rev;
   logic [2*N_BITS-1:0] shift_op1;
-  logic [  N_BITS-1:0] shift_op2;
+  logic [         4:0] shift_op2;
 
   logic [    N_BITS:0] add_op1;
   logic [    N_BITS:0] add_op2;
@@ -117,26 +117,28 @@ module fu_dae_full_act
 
 
   // mo_instr: asserted if PE instruction is multi-operand (2-cycle instruction)
-  assign mo_instr = instr_i[4] == 1'b1;
+  assign mo_instr   = instr_i[4] == 1'b1;
 
   ////////////////////////////////////////////////////////////////
   //                FU Input/Output Assignments                 //
   ////////////////////////////////////////////////////////////////
 
   // Negated versione of a, b and temp_op_reg
-  assign op1_neg = ~a_signed;
-  assign op2_neg = ~b_signed;
+  assign op1_neg    = ~a_signed;
+  assign op2_neg    = ~b_signed;
   assign op2_neg_d1 = ~temp_op_reg;
 
   // 32-bit adder
-  assign add_res = add_op1 + add_op2;
+  assign add_res    = add_op1 + add_op2;
 
   // 32-bit mul
-  assign mul_res = mul_op1 * mul_op2;
+  assign mul_res    = mul_op1 * mul_op2;
 
   // 32-bit shifter
-  assign shift_res_ext = shift_op1 >>> shift_op2;
-  assign shift_res = shift_res_ext[31:0];
+  logic shift_overflow;
+  assign shift_overflow = |b_signed[N_BITS-1:5];
+  assign shift_res_ext  = shift_op1 >>> shift_op2;
+  assign shift_res      = shift_overflow ? '0 : shift_res_ext[31:0];
 
   // LHS logic
   generate
@@ -230,7 +232,7 @@ module fu_dae_full_act
     mul_op1   = a_signed;
     mul_op2   = b_signed;
     shift_op1 = {{32{a_signed[N_BITS-1]}}, a_signed};
-    shift_op2 = b_signed;
+    shift_op2 = b_signed[4:0];
 
     case (instr_i)
       NOP: begin
@@ -269,7 +271,7 @@ module fu_dae_full_act
 
       ARSH: begin
         shift_op1 = {{32{a_signed[N_BITS-1]}}, a_signed};
-        shift_op2 = b_signed;
+        shift_op2 = b_signed[4:0];
       end
 
       LRSH: begin
@@ -311,19 +313,19 @@ module fu_dae_full_act
 
       SHACC: begin
         shift_op1 = {{32{pe_res_i[N_BITS-1]}}, pe_res_i};
-        shift_op2 = a_signed;
+        shift_op2 = a_signed[4:0];
         add_op1   = {shift_res, 1'b0};
         add_op2   = {b_signed, 1'b0};
       end
 
       MULCARSH: begin
         shift_op1 = {{32{temp_res[N_BITS-1]}}, temp_res};
-        shift_op2 = const_i;
+        shift_op2 = const_i[4:0];
       end
 
       CLSHSUB: begin
         shift_op1 = {32'd0, lsh_op1_rev};
-        shift_op2 = const_i;
+        shift_op2 = const_i[4:0];
         add_op1   = {temp_res, 1'b1};
         add_op2   = {op2_neg_d1, 1'b1};
       end
@@ -344,7 +346,7 @@ module fu_dae_full_act
         mul_op1   = a_signed;
         mul_op2   = b_signed;
         shift_op1 = {{32{a_signed[N_BITS-1]}}, a_signed};
-        shift_op2 = b_signed;
+        shift_op2 = b_signed[4:0];
       end
 
     endcase

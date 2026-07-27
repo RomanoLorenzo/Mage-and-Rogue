@@ -290,11 +290,6 @@ module fu_s_part_gemm_add
     end
   end
 
-  assign part_op_instr = (instr_i == ADD) ? 2'b00 :
-                    (instr_i == SUB) ? 2'b01 :
-                    (instr_i == ACC) ? 2'b10 :
-                    2'b00;
-
   // 32-bit mul
   assign mul_res = mul_op1 * mul_op2;
 

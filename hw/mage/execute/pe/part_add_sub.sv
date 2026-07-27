@@ -24,6 +24,14 @@ module part_add_sub
   logic vec_mode_16;
   logic acc_mode;
 
+  //Accumulation signals
+  logic [35:0] acc_adder_part_16_res;
+  logic [35:0] acc_adder_part_16_a;
+  logic [35:0] acc_adder_part_16_b;
+  logic [31:0] acc_adder_part_8_res;
+  logic [31:0] acc_adder_part_8_a;
+  logic [31:0] acc_adder_part_8_b;
+
   ////////////////////////////////
   //        Vector Mode         //
   ////////////////////////////////
@@ -125,7 +133,7 @@ module part_add_sub
         // the result is on 16 bits or 32 bits depending on the accumulation mode 
         adder_in_a[8:1]   = adder_op_b[7:0];
         adder_in_a[17:10] = adder_op_b[15:8];
-        if(acc_mode) begin
+        if (acc_mode) begin
           adder_in_a[26:19] = {8{adder_op_b[15]}};
           adder_in_a[35:28] = {8{adder_op_b[15]}};
         end else begin
@@ -135,7 +143,7 @@ module part_add_sub
 
         adder_in_b[8:1]   = adder_op_b[23:16];
         adder_in_b[17:10] = adder_op_b[31:24];
-        if(acc_mode) begin
+        if (acc_mode) begin
           adder_in_b[26:19] = {8{adder_op_b[31]}};
           adder_in_b[35:28] = {8{adder_op_b[31]}};
         end else begin
@@ -217,14 +225,6 @@ module part_add_sub
   ////////////////////////////////////////////////////////////////
   // 16-bit and 8-bit Adders for Vector Mode Final Accumulation //
   ////////////////////////////////////////////////////////////////
-
-  //Accumulation signals
-  logic [35:0] acc_adder_part_16_res;
-  logic [35:0] acc_adder_part_16_a;
-  logic [35:0] acc_adder_part_16_b;
-  logic [31:0] acc_adder_part_8_res;
-  logic [31:0] acc_adder_part_8_a;
-  logic [31:0] acc_adder_part_8_b;
 
 
   // partitioned 16-bit adder for:
@@ -358,7 +358,7 @@ module part_add_sub
     if (vec_mode_16 || vec_mode_8) begin
       acc_adder_part_16_res = $signed(acc_adder_part_16_a) + $signed(acc_adder_part_16_b);
     end
-    
+
     if (vec_mode_8) begin
       acc_adder_part_8_res = $signed(acc_adder_part_8_a) + $signed(acc_adder_part_8_b);
     end

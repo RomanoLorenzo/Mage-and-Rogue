@@ -53,6 +53,7 @@ module peripheral_regs
   %endif
     output loop_vars_t [N_LP-1:0] reg_loop_vars_o,
     output logic [N_AGE_TOT-1:0][N_IVS-1:0][NBIT_LP_IV-1:0] reg_age_strides_o,
+    output logic [N_AGE_TOT-1:0][N_IVS-1:0] reg_age_stride_mode_o,
     output logic [N_AGE_TOT-1:0][LOG2_HWLP_RF_SIZE-1:0] reg_age_acc_hwlp_sel_o,
     output logic [ACC_CFGMEM_SIZE-1:0][N_AGE_TOT-1:0][NBIT_CFG_STREAM_WORD-1:0] reg_agu_cfgmem_o,
     ////////////////////////////////
@@ -152,6 +153,16 @@ module peripheral_regs
   %for i in range(4):
     reg_age_strides_o[${s}][${i}] = reg2hw.strides[${s}].s${i}.q;
   %endfor
+%endfor
+
+    ////////////////////////////////
+    //     AGE Stride Modes       //
+    ////////////////////////////////
+%for s in range(n_age_tot):
+    reg_age_stride_mode_o[${s}][0] = reg2hw.stride_mode[${s}].m0.q;
+    reg_age_stride_mode_o[${s}][1] = reg2hw.stride_mode[${s}].m1.q;
+    reg_age_stride_mode_o[${s}][2] = reg2hw.stride_mode[${s}].m2.q;
+    reg_age_stride_mode_o[${s}][3] = reg2hw.stride_mode[${s}].m3.q;
 %endfor
 
     ////////////////////////////////

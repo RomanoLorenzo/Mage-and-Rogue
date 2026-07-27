@@ -17,6 +17,7 @@
 
     gemm_computation : 1,
     activation_computation : 0,
+    has_delay_pe : 1,
 
     common_params: {
         n_pea_rows: 4,
@@ -50,6 +51,8 @@
         n_dma_ch_per_out_stream: 1,
         div_pes : [],
         is_div_pipe: 1,
+        part_add_pes: [],
+        part_mul_pes: [],
         in_stream_dma_ch_placement : [[0], [1], [2], [3]],
         out_stream_pea_dout_placement : [[0, 1], [0, 1], [2, 3], [2, 3]],
         r_fifo_synch_placement_type : "g4",

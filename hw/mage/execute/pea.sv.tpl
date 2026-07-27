@@ -141,33 +141,37 @@ module pea
   logic [M/2-1:0] pea_ready_twin_cols;
 %endif
 
-%if activation_computation == 1:
+%if (dae_cgra == 1 and has_delay_pe == 1) or (streaming_cgra == 1 and activation_computation == 1):
   ////////////////////////////////
-  //  Streaming: Delay Signals  //
+  //       Delay Signals        //
   ////////////////////////////////
+  // DAE PEs always get the delay-operand relay; streaming PEs only when
+  // activation_computation selects an FU that consumes it.
 %for r in range(n_pea_rows):
     %for c in range(n_pea_cols):
-logic [N_NEIGH_PE-1:0][N_BITS:0] in_delay_op${r}${c};  
+logic [N_NEIGH_PE-1:0][N_BITS-1:0] in_delay_op${r}${c};
     %endfor
 %endfor
 
 %for r in range(n_pea_rows):
     %for c in range(n_pea_cols):
-logic [N_BITS:0] out_delay_op${r}${c};  
+logic [N_BITS-1:0] out_delay_op${r}${c};
+    %endfor
+%endfor
+
+%if streaming_cgra == 1:
+%for r in range(n_pea_rows):
+    %for c in range(n_pea_cols):
+logic [N_NEIGH_PE-1:0] in_delay_op_valid${r}${c};
     %endfor
 %endfor
 
 %for r in range(n_pea_rows):
     %for c in range(n_pea_cols):
-logic [N_NEIGH_PE-1:0] in_delay_op_valid${r}${c};  
+logic out_delay_op_valid${r}${c};
     %endfor
 %endfor
-
-%for r in range(n_pea_rows):
-    %for c in range(n_pea_cols):
-logic out_delay_op_valid${r}${c};  
-    %endfor
-%endfor
+%endif
 %endif
 
   ////////////////////////////////
@@ -296,11 +300,15 @@ logic out_delay_op_valid${r}${c};
             %if r1 < 0 or c1 < 0 or r1 >= n_pea_rows or c1 >= n_pea_cols:
   assign in_data_pe${r}${c}[${pattern_neigh_pe[pe]}] = '0; <% k = k + 1 %> <% pe = pe + 1 %>
             %else:
-  assign in_data_pe${r}${c}[${pattern_neigh_pe[pe]}] = out_data_pe${r1}${c1}; <% k = k + 1 %> <% pe = pe + 1 %>                
+  assign in_data_pe${r}${c}[${pattern_neigh_pe[pe]}] = out_data_pe${r1}${c1}; <% k = k + 1 %> <% pe = pe + 1 %>
             %endif
           %endif
         %endfor
       %endfor
+  // SELF is not fed through the operand mux (self-loopback is wired directly to the FU); tie explicitly to avoid an undriven slot
+  assign in_data_pe${r}${c}[SELF] = '0;
+  // DELAY_OP is driven locally inside pe_dae (overwritten with the selected delay operand); tie explicitly to avoid an undriven slot
+  assign in_data_pe${r}${c}[DELAY_OP] = '0;
 
     %endfor
   %endfor
@@ -353,7 +361,30 @@ logic out_delay_op_valid${r}${c};
   assign in_delay_op_valid${r}${c}[${k}] = '0; <% k = k + 1 %>
               %endif
             %else:
-  assign in_delay_op_valid${r}${c}[${k}] = out_delay_op_valid${r1}${c1}; <% k = k + 1 %>                  
+  assign in_delay_op_valid${r}${c}[${k}] = out_delay_op_valid${r1}${c1}; <% k = k + 1 %>
+            %endif
+          %endif
+        %endfor
+      %endfor
+    <% k = 0 %>
+    %endfor
+  %endfor
+%endif
+
+%if dae_cgra == 1 and has_delay_pe == 1:
+  ////////////////////////////////////
+  //     DAE: Delay Ops assignments //
+  ////////////////////////////////////
+  <% k = 0 %>
+  %for r in range(n_pea_rows):
+    %for c in range(n_pea_cols):
+      %for r1 in range(r-1,r+2,1):
+        %for c1 in range(c-1,c+2,1):
+          %if (r1 == r or c1 == c) and (not(r1 == r and c1 == c)): #this defines noc
+            %if r1 < 0 or c1 < 0 or r1 >= n_pea_rows or c1 >= n_pea_cols:
+  assign in_delay_op${r}${c}[${k}] = '0; <% k = k + 1 %>
+            %else:
+  assign in_delay_op${r}${c}[${k}] = out_delay_op${r1}${c1}; <% k = k + 1 %>
             %endif
           %endif
         %endfor
@@ -462,7 +493,8 @@ logic out_delay_op_valid${r}${c};
   ////////////////////////////////
   %for r in range(n_pea_rows):
     %for c in range(n_pea_cols):
-      %if (int(r) * int(n_pea_cols) + int(c)) in acc_pes:
+      <% is_acc_pe = (int(r) * int(n_pea_cols) + int(c)) in acc_pes %>
+      %if is_acc_pe:
   pe_dae_part_gemm_acc pe_dae_part_gemm_acc_${r}${c} (
       .acc_match_i(acc_match_i[${r}]),
       %else:
@@ -475,13 +507,13 @@ logic out_delay_op_valid${r}${c};
       %if format_full == 1:
       .acc_match_i(acc_match_i[${r}]),
       %endif
-      %if activation_computation == 1:
+      %if has_delay_pe == 1:
       .neigh_delay_op_i(in_delay_op${r}${c}),
       .delay_op_o(out_delay_op${r}${c}),
       %endif
       .ctrl_pe_i(ctrl_pea_i[${r}][${c}]),
       .pe_res_o(out_data_pe${r}${c})
-  ); 
+  );
     %endfor
   %endfor
 %endif

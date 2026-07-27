@@ -176,9 +176,36 @@
           name: "S2",
           desc: "Stride 2" 
         },
-        { bits: "31:24", 
+        { bits: "31:24",
           name: "S3",
-          desc: "Stride 3" 
+          desc: "Stride 3"
+        },
+        ],
+        }
+    },
+    { multireg:
+        { name: "STRIDE_MODE",
+        desc: "Per-IV addressing mode selection for AGEs strides: 0 = linear (Si * i), 1 = tiled ((i >> log2(Si)) * (i % Si)), with Si constrained to be a power of two and the stride field holding log2(Si) in tiled mode",
+        count : "${n_age_tot}",
+        cname: "STRIDE_MODE",
+        swaccess: "rw",
+        hwaccess: "hro",
+        fields: [
+        { bits: "0",
+          name: "M0",
+          desc: "Addressing mode for stride 0"
+        },
+        { bits: "1",
+          name: "M1",
+          desc: "Addressing mode for stride 1"
+        },
+        { bits: "2",
+          name: "M2",
+          desc: "Addressing mode for stride 2"
+        },
+        { bits: "3",
+          name: "M3",
+          desc: "Addressing mode for stride 3"
         },
         ],
         }

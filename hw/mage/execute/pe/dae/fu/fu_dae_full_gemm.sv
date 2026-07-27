@@ -35,7 +35,7 @@ module fu_dae_full_gemm
 
   logic [  N_BITS-1:0] lsh_op1_rev;
   logic [2*N_BITS-1:0] shift_op1;
-  logic [  N_BITS-1:0] shift_op2;
+  logic [         4:0] shift_op2;
 
   logic [    N_BITS:0] add_op1;
   logic [    N_BITS:0] add_op2;
@@ -90,8 +90,10 @@ module fu_dae_full_gemm
   assign mul_res = mul_op1 * mul_op2;
 
   // 32-bit shifter
-  assign shift_res_ext = shift_op1 >>> shift_op2;
-  assign shift_res = shift_res_ext[31:0];
+  logic shift_overflow;
+  assign shift_overflow = |b_signed[N_BITS-1:5];
+  assign shift_res_ext  = shift_op1 >>> shift_op2;
+  assign shift_res      = shift_overflow ? '0 : shift_res_ext[31:0];
 
   // LHS logic
   generate
@@ -159,17 +161,17 @@ module fu_dae_full_gemm
 
       ARSH: begin
         shift_op1 = {{32{a_signed[N_BITS-1]}}, a_signed};
-        shift_op2 = b_signed;
+        shift_op2 = b_signed[4:0];
       end
 
       LRSH: begin
         shift_op1 = {32'd0, a_signed};
-        shift_op2 = b_signed;
+        shift_op2 = b_signed[4:0];
       end
 
       LSH: begin
         shift_op1 = {32'd0, lsh_op1_rev};
-        shift_op2 = b_signed;
+        shift_op2 = b_signed[4:0];
       end
 
       default: begin

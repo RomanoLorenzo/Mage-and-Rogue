@@ -70,6 +70,7 @@ module mage_top
   %endif
   loop_vars_t [N_LP-1:0] reg_loop_vars;
   logic [N_AGE_TOT-1:0][N_IVS-1:0][NBIT_LP_IV-1:0] reg_age_strides;
+  logic [N_AGE_TOT-1:0][N_IVS-1:0] reg_age_stride_mode;
   logic [N_AGE_TOT-1:0][LOG2_HWLP_RF_SIZE-1:0] reg_age_acc_hwlp_sel;
   logic [ACC_CFGMEM_SIZE-1:0][N_AGE_TOT-1:0][NBIT_CFG_STREAM_WORD-1:0] reg_mage_cfgmem;
   ////////////////////////////////////////////////////////////////
@@ -198,6 +199,7 @@ module mage_top
   %endif
       .reg_loop_vars_o(reg_loop_vars),
       .reg_age_strides_o(reg_age_strides),
+      .reg_age_stride_mode_o(reg_age_stride_mode),
       .reg_age_acc_hwlp_sel_o(reg_age_acc_hwlp_sel),
       .reg_agu_cfgmem_o(reg_mage_cfgmem),
       ////////////////////////////////////////////////////////////////
@@ -354,6 +356,7 @@ module mage_top
       .cfgmem_addr_d_o(cfg_addr),
 % endif
       .reg_age_strides_i(reg_age_strides),
+      .reg_age_stride_mode_i(reg_age_stride_mode),
       .reg_age_acc_hwlp_sel_i(reg_age_acc_hwlp_sel),
       .reg_II_i(reg_II),
       .cfgmem_content_i(reg_mage_cfgmem),

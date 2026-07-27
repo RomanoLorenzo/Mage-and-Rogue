@@ -4,7 +4,7 @@ PYTHON = python3
 FUSESOC = fusesoc
 
 MAGE_CORE = vlsi:polito:mage-dae
-MAGE_CFG_HJSON ?= config/dae/cfg_2x2_2x2_full.hjson
+MAGE_CFG_HJSON ?= config/dae/cfg_2x4_2x2_part.hjson
 
 ### Regtool ###
 REGTOOL_SCRIPT = util/regtool.py

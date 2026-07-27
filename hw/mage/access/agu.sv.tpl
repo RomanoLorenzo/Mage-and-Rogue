@@ -33,6 +33,7 @@ module agu
     //                Re-Order Unit Configuration                 //
     ////////////////////////////////////////////////////////////////
     input logic [N_AGE_TOT-1:0][N_IVS-1:0][NBIT_LP_IV-1:0] reg_age_strides_i,
+    input logic [N_AGE_TOT-1:0][N_IVS-1:0] reg_age_stride_mode_i,
     input logic [N_AGE_TOT-1:0][LOG2_HWLP_RF_SIZE-1:0] reg_age_acc_hwlp_sel_i,
     ////////////////////////////////////////////////////////////////
     //                   Streams Configuration                    //
@@ -186,6 +187,7 @@ module agu
     .end_lp_i(hwlp_rou_end_lp),
     .end_lp_o(age_end_lp),
     .age_strides_i(reg_age_strides_i),
+    .age_stride_mode_i(reg_age_stride_mode_i),
     .rou_i(rou_to_age_hwlp),
     .pea_acc_reset_i(rou_to_age_pea_acc_reset),
     .stream_valid_i(rou_to_age_stream_valid),

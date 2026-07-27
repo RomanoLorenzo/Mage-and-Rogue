@@ -25,6 +25,8 @@ package agu_pkg;
   localparam unsigned NBIT_LP_IV = 8;
   //Number of bits required for the flat address
   localparam unsigned NBIT_FLAT_ADDR = $clog2(BANK_SIZE);
+  //Number of bits required to represent a shift amount over an iteration variable (used for tiled stride addressing)
+  localparam unsigned NBIT_STRIDE_SHAMT = $clog2(NBIT_LP_IV);
 
 
   ////////////////////////////////////////////////////////////////
