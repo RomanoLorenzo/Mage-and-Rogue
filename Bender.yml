@@ -1,0 +1,20 @@
+package:
+  name: Mage-and-Rogue
+  authors:
+    - "Alessio Naclerio <alessio.naclerio@polito.it>"
+    - "Lorenzo Romano <s322011@studenti.polito.it>"
+
+dependencies:
+  axi_obi: { git: "https://github.com/pulp-platform/axi_obi.git", version: 0.1.0 }
+
+export_include_dirs:
+  - src
+  - generated
+
+sources:
+  - include_dirs:
+      - src
+      - generated
+    files:
+      - src/custom_ip_pkg.sv
+      - generated/custom_ip_top.sv
