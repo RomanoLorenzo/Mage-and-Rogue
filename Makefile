@@ -13,10 +13,10 @@ REGTOOL_SRC_FILE = ./hw/mage/configuration/mage_regs.hjson
 REGTOOL_SW_DEST_DIR = ./sw
 
 re-vendor:
-	./util/vendor.py ./vendor/lowrisc_opentitan.vendor.hjson -v --update; \
-	./util/vendor.py ./vendor/pulp_platform_register_interface.vendor.hjson -v --update; \
-	./util/vendor.py ./vendor/pulp_platform_common_cells.vendor.hjson -v --update; \
-	./util/vendor.py ./vendor/pulp_platform_tech_cells_generic.vendor.hjson -v --update;
+	$(PYTHON) ./util/vendor.py ./vendor/lowrisc_opentitan.vendor.hjson -v --update; \
+	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_register_interface.vendor.hjson -v --update; \
+	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_common_cells.vendor.hjson -v --update; \
+	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_tech_cells_generic.vendor.hjson -v --update;
 
 mage-gen:
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute --tpl-sv hw/mage/execute/pea.sv.tpl 
