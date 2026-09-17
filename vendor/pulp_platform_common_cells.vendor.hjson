@@ -1,0 +1,27 @@
+// Copyright 2022 Thales DIS France SAS
+// SPDX-License-Identifier: Apache-2.0 WITH SHL-2.0.
+{
+  name: "pulp_platform_common_cells",
+  target_dir: "pulp_platform_common_cells",
+
+  upstream: {
+    url: "https://github.com/pulp-platform/common_cells.git",
+    rev: "v1.23.0",
+  },
+
+  exclude_from_upstream: [
+    ".github",
+    ".gitlab-ci.yml",
+    ".travis.yml",
+    "Bender.yml",
+    "ci",
+    "common_cells.core",
+    "formal",
+    "ips_list.yml",
+    "lint",
+    "Makefile",
+    "src_files.yml",
+    "test",
+  ]
+}
+

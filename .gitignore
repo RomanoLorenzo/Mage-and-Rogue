@@ -1,15 +1,20 @@
 /build
 *.log
-/vendor
+/vendor/*
+!/vendor/*.vendor.hjson
+!/vendor/*.lock.hjson
 .vscode
 vivado.jou
 vivado.log
 /util/reggen/__pycache__
 /util/topgen/__pycache__
+commands.md
 
 /hw/mage/stream/streaming_interface.sv
 /hw/mage/packages/stream_intf_pkg.sv
 /hw/mage/execute/pea.sv
+/hw/mage/execute/pe/dae/pe_dae.sv
+/hw/mage/execute/pe/dae/pe_dae_part_gemm_acc.sv
 /hw/mage/packages/agu_pkg.sv
 /hw/mage/packages/xbar_pkg.sv
 /hw/mage/access/age.sv
@@ -17,6 +22,7 @@ vivado.log
 /hw/mage/configuration/peripheral_regs.sv
 /hw/mage/configuration/mage_reg_top.sv
 /hw/mage/configuration/mage_reg_pkg.sv
+/hw/mage/dmem_decoder.sv
 /hw/mage_top.sv
 /hw/mage_wrapper.sv 
 /hw/mage/configuration/mage_regs.hjson
@@ -24,6 +30,7 @@ vivado.log
 /hw/mage/access/cfg_dispatcher.sv
 /hw/mage/access/k_controller.sv
 /hw/fpga/fpga_sram_wrapper.sv
+/hw/fpga/scripts/generate_sram.tcl
 
 /sw/mage.h
 /sw/mage.c

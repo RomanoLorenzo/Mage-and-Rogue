@@ -1,0 +1,22 @@
+// Copyright 2022 OpenHW Group
+// SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
+{
+  name: "pulp_platform_register_interface",
+  target_dir: "pulp_platform_register_interface",
+
+  upstream: {
+    url: "https://github.com/pulp-platform/register_interface.git",
+    rev: "v0.3.6",
+  },
+
+  exclude_from_upstream: [
+    ".github",
+    ".gitlab-ci.yml",
+    "Bender.yml",
+    "docs",
+    "ips_list.yml",
+    "lint",
+    "src_files.yml",
+  ]
+}
+
