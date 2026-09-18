@@ -7,18 +7,22 @@
 // Date: 02/02/2026
 // Description: Wrapper for Mage converting OBI/reg to AXI interface for CVA6-Ariane communication
 
+%if dae_cgra == 1:
 import agu_pkg::*;
 import xbar_pkg::*;
+%endif
+%if streaming_cgra == 1:
+import fifo_pkg::*;
+import stream_intf_pkg::*;
+%endif
 import pea_pkg::*;
 import reg_pkg::*;
 import obi_pkg::*;
 
 module mage_axi_wrapper #(
     /// AXI Address Width
-    //parameter int unsigned       AxiAddrWidth = ObiCfg.AddrWidth,
     parameter int unsigned AxiAddrWidth = 32,
     /// AXI Data Width
-    //parameter int unsigned       AxiDataWidth = ObiCfg.DataWidth,
     parameter int unsigned AxiDataWidth = 32,
     /// AXI ID Width
     parameter int unsigned AxiIdWidth   = 0,
@@ -34,12 +38,20 @@ module mage_axi_wrapper #(
     input logic clk_i,
     input logic rst_ni,
 
-    /* ----- AXI interface for data ----- */
+%if dae_cgra == 1:
+    /* ----- AXI interface for data (DAE mode) ----- */
     input  axi_req_t axi_req_i,
     output axi_rsp_t axi_rsp_o,
 
     output logic mage_intr_o,
     /* ----- End of AXI interface for data ----- */
+%elif streaming_cgra == 1:
+    /* ----- HW FIFO interface for streaming (Rogue mode) ----- */
+    input  fifo_req_t  [N_DMA_CH-1:0] fifo_req_i,
+    output fifo_resp_t [N_DMA_CH-1:0] fifo_resp_o,
+    output logic       [N_DMA_CH-1:0] mage_done_o,
+    /* ----- End of HW FIFO interface for streaming ----- */
+%endif
 
     /* ----- AXI interface for controls ----- */
     input  axi_req_t axi_ctrl_req_i,
@@ -47,6 +59,7 @@ module mage_axi_wrapper #(
     /* ----- End of AXI interface for controls ----- */
 );
 
+%if dae_cgra == 1:
   /* ----- OBI2OBI structs definition ----- */
   // Channel A Payload
   typedef struct packed {
@@ -85,6 +98,7 @@ module mage_axi_wrapper #(
   bridge_obi_req_t bridge_req;
   bridge_obi_rsp_t bridge_rsp;
   /* ----- End of OBI2OBI structs definition ----- */
+%endif
 
   /* ----- REG2REG structs definition ----- */
   // Bridge's reg request (Matching typedef.svh macro order)
@@ -109,8 +123,10 @@ module mage_axi_wrapper #(
   /* ----- End of REG2REG structs definition ----- */
 
   /* ----- Mage block -----*/
+%if dae_cgra == 1:
   obi_pkg::obi_req_t mage_obi_req_i;
   obi_pkg::obi_resp_t mage_obi_resp_o;
+%endif
 
   reg_pkg::reg_req_t mage_reg_req_i;
   reg_pkg::reg_rsp_t mage_reg_rsp_o;
@@ -119,6 +135,7 @@ module mage_axi_wrapper #(
       .clk_i  (clk_i),
       .rst_n_i(rst_ni),
 
+%if dae_cgra == 1:
       /* ----- Data stream (OBI) and Interrupts ----- */
       .slave_req_i (mage_obi_req_i),
       .slave_resp_o(mage_obi_resp_o),
@@ -126,6 +143,13 @@ module mage_axi_wrapper #(
       // Interrupts
       .mage_intr_o(mage_intr_o),
       /* ----- End of data stream (OBI) and Interrupts ----- */
+%elif streaming_cgra == 1:
+      /* ----- HW FIFO interface ----- */
+      .fifo_req_i (fifo_req_i),
+      .fifo_resp_o(fifo_resp_o),
+      .mage_done_o(mage_done_o),
+      /* ----- End of HW FIFO interface ----- */
+%endif
 
       /* ----- Control signals (reg) ----- */
       .reg_req_i(mage_reg_req_i),
@@ -134,6 +158,7 @@ module mage_axi_wrapper #(
   );
   /* ----- End Mage block -----*/
 
+%if dae_cgra == 1:
   // Configuration struct for the bridge
   localparam obi_pkg::obi_cfg_t bridge_obi_cfg = '{
       UseRReady: 1'b0,
@@ -203,6 +228,7 @@ module mage_axi_wrapper #(
       .rsp_r_user_i          ('0)
   );
   /* ----- End of AXI2OBI bridge block ----- */
+%endif
 
   /* ----- AXI2reg bridge block ----- */
   axi_to_reg_v2 #(
@@ -232,6 +258,7 @@ module mage_axi_wrapper #(
   );
   /* ----- End of AXI2reg bridge block ----- */
 
+%if dae_cgra == 1:
   // From bridge to Mage (OBI)
   assign mage_obi_req_i.req   = bridge_req.req;
   assign mage_obi_req_i.we    = bridge_req.a.we;
@@ -246,6 +273,7 @@ module mage_axi_wrapper #(
 
   assign bridge_rsp.r.err     = 1'b0;  // Mage has no error BUS
   assign bridge_rsp.r.rid     = 1'b0;  // Mage manages no IDs
+%endif
 
   // From bridge to Mage (REG)
   assign mage_reg_req_i.valid = bridge_reg_req.valid;
@@ -260,3 +288,4 @@ module mage_axi_wrapper #(
   assign bridge_reg_rsp.rdata = mage_reg_rsp_o.rdata;
 
 endmodule : mage_axi_wrapper
+
