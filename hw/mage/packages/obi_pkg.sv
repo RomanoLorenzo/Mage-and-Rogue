@@ -41,9 +41,9 @@ package obi_pkg;
       UseMemtype: 1'b0,
       UseProt: 1'b0,
       UseDbg: 1'b0,
-      AUserWidth: 0,
-      WUserWidth: 0,
-      RUserWidth: 0,
+      AUserWidth: 1,
+      WUserWidth: 1,
+      RUserWidth: 1,
       MidWidth: 0,
       AChkWidth: 0,
       RChkWidth: 0

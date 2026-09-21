@@ -1,20 +1,96 @@
 package:
-  name: Mage-and-Rogue
-  authors:
-    - "Alessio Naclerio <alessio.naclerio@polito.it>"
-    - "Lorenzo Romano <s322011@studenti.polito.it>"
+  name: mage_dae
+  authors: ["Lorenzo Romano"]
 
-dependencies:
-  axi_obi: { git: "https://github.com/pulp-platform/axi_obi.git", version: 0.1.0 }
-
+# Make *.svh available externally
 export_include_dirs:
-  - src
-  - generated
+  - vendor/pulp_platform_obi/include
+  - vendor/pulp_platform_axi/include
+  - vendor/pulp_platform_common_cells/include
+  - vendor/pulp_platform_register_interface/include
 
 sources:
-  - include_dirs:
-      - src
-      - generated
-    files:
-      - src/custom_ip_pkg.sv
-      - generated/custom_ip_top.sv
+
+  files:
+
+    # *_pkg.sv
+    - vendor/pulp_platform_common_cells/src/cf_math_pkg.sv
+    - hw/mage/packages/agu_pkg.sv
+    - hw/mage/packages/pea_pkg.sv
+    - hw/mage/packages/xbar_pkg.sv
+    - hw/mage/packages/stream_intf_pkg.sv
+    - hw/mage/packages/reg_pkg.sv
+    - hw/mage/packages/fifo_pkg.sv
+    - hw/mage/packages/obi_pkg.sv
+    - hw/mage/configuration/mage_reg_pkg.sv
+    - vendor/pulp_platform_axi/src/axi_pkg.sv
+
+    # Vendorized primitives
+    - vendor/lowrisc_opentitan/src/prim_subreg.sv
+    - vendor/lowrisc_opentitan/src/prim_subreg_arb.sv
+    - vendor/lowrisc_opentitan/src/prim_subreg_ext.sv
+    - vendor/lowrisc_opentitan/src/prim_subreg_shadow.sv
+    - vendor/pulp_platform_register_interface/src/reg_intf.sv
+    - vendor/pulp_platform_common_cells/src/fifo_v3.sv
+    - vendor/pulp_platform_common_cells/src/stream_fifo.sv
+    - vendor/pulp_platform_common_cells/src/stream_mux.sv
+    - vendor/pulp_platform_common_cells/src/stream_fork.sv
+    - vendor/pulp_platform_common_cells/src/stream_join_dynamic.sv
+    - vendor/pulp_platform_common_cells/src/stream_join.sv
+    - vendor/pulp_platform_common_cells/src/stream_fork_dynamic.sv
+    - vendor/pulp_platform_axi/src/axi_to_detailed_mem.sv
+    - vendor/pulp_platform_common_cells/src/spill_register_flushable.sv
+    - vendor/pulp_platform_common_cells/src/spill_register.sv
+    - vendor/pulp_platform_register_interface/src/periph_to_reg.sv
+    - vendor/pulp_platform_common_cells/src/lzc.sv
+    - vendor/pulp_platform_common_cells/src/rr_arb_tree.sv
+    - vendor/pulp_platform_common_cells/src/stream_arbiter_flushable.sv
+    - vendor/pulp_platform_common_cells/src/stream_arbiter.sv
+    - vendor/pulp_platform_register_interface/src/reg_mux.sv
+    - vendor/pulp_platform_register_interface/src/reg_demux.sv
+    - vendor/pulp_platform_register_interface/src/axi_to_reg_v2.sv
+    - vendor/pulp_platform_common_cells/src/delta_counter.sv
+    - vendor/pulp_platform_common_cells/src/counter.sv
+    - vendor/pulp_platform_axi/src/axi_demux_simple.sv
+    - vendor/pulp_platform_common_cells/src/stream_to_mem.sv
+    - vendor/pulp_platform_axi_obi/src/axi_to_detailed_mem_user.sv
+    - vendor/pulp_platform_obi/src/obi_mux.sv
+    - vendor/pulp_platform_common_cells/src/mem_to_banks_detailed.sv
+    - vendor/pulp_platform_axi_obi/src/axi_to_obi.sv
+
+    # Access Unit modules
+    - hw/mage/access/hwlp_rf.sv
+    - hw/mage/access/hwlp_rou.sv
+    - hw/mage/access/hwlp.sv
+    - hw/mage/access/k_controller.sv
+    - hw/mage/access/cfg_dispatcher.sv
+    - hw/mage/access/agu.sv
+    - hw/mage/access/age_unit.sv
+    - hw/mage/access/age.sv
+
+    # Configuration, crossbars and FSM
+    - hw/mage/fsm.sv
+    - hw/mage/configuration/cfg_regs_out_pea.sv
+    - hw/mage/configuration/cfg_regs_pea.sv
+    - hw/mage/configuration/cfg_regs_ls_stream_sel.sv
+    - hw/mage/configuration/peripheral_regs.sv
+    - hw/mage/configuration/mage_reg_top.sv
+    - hw/mage/xbars/age_to_banks/xbar_age_to_banks.sv
+    - hw/mage/xbars/banks_pea/dmem_pea_select.sv
+    - hw/mage/xbars/banks_pea/xbar_pea_banks.sv
+
+    # Execute unit
+    - hw/mage/execute/pe/dae/fu/fu_dae_full_gemm.sv
+    - hw/mage/execute/pe/dae/pe_dae.sv
+    - hw/mage/execute/pea.sv
+
+    # Memory and SRAM
+    - vendor/pulp_platform_tech_cells_generic/src/rtl/tc_sram.sv
+    - hw/mage/memory/sram_wrapper.sv
+    - hw/mage/memory/data_memory.sv
+
+    # Top-level wrappers
+    - hw/mage/dmem_decoder.sv
+    - hw/mage_top.sv
+    - hw/mage_wrapper.sv
+    - hw/mage_axi_wrapper.sv

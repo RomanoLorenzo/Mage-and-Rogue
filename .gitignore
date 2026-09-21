@@ -3,12 +3,17 @@
 /vendor/*
 !/vendor/*.vendor.hjson
 !/vendor/*.lock.hjson
+!/vendor/lowrisc_opentitan/Bender.yml
+!/vendor/pulp_platform_register_interface/Bender.yml
+!/vendor/pulp_platform_commmon_cells/Bender.yml
+!/vendor/pulp_platform_tech_cells_generic/Bender.yml
 .vscode
 vivado.jou
 vivado.log
 /util/reggen/__pycache__
 /util/topgen/__pycache__
 commands.md
+.bender
 
 /hw/mage/stream/streaming_interface.sv
 /hw/mage/packages/stream_intf_pkg.sv
@@ -24,8 +29,7 @@ commands.md
 /hw/mage/configuration/mage_reg_pkg.sv
 /hw/mage/dmem_decoder.sv
 /hw/mage_top.sv
-/hw/mage_wrapper.sv 
-/hw/mage_axi_wrapper.sv
+/hw/mage_wrapper.sv
 /hw/mage/configuration/mage_regs.hjson
 /hw/mage/access/agu.sv
 /hw/mage/access/cfg_dispatcher.sv

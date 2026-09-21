@@ -16,7 +16,18 @@ re-vendor:
 	$(PYTHON) ./util/vendor.py ./vendor/lowrisc_opentitan.vendor.hjson -v --update; \
 	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_register_interface.vendor.hjson -v --update; \
 	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_common_cells.vendor.hjson -v --update; \
-	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_tech_cells_generic.vendor.hjson -v --update;
+	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_tech_cells_generic.vendor.hjson -v --update; \
+	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_axi.vendor.hjson -v --update; \
+	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_axi_obi.vendor.hjson -v --update; \
+	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_obi.vendor.hjson -v --update;
+
+rv:
+	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_register_interface.vendor.hjson -v --update; \
+	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_common_cells.vendor.hjson -v --update; \
+	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_tech_cells_generic.vendor.hjson -v --update; \
+	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_axi.vendor.hjson -v --update; \
+	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_axi_obi.vendor.hjson -v --update; \
+	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_obi.vendor.hjson -v --update;
 
 mage-gen:
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute --tpl-sv hw/mage/execute/pea.sv.tpl 
@@ -54,7 +65,6 @@ rogue-gen:
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/configuration --tpl-sv hw/mage/configuration/peripheral_regs.sv.tpl
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_top.sv.tpl 
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_wrapper.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_axi_wrapper.sv.tpl 
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/configuration --tpl-sv hw/mage/configuration/mage_regs.hjson.tpl 
 	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.h.tpl 
 	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_params.h.tpl 
@@ -116,3 +126,19 @@ clean-build:
 
 clean-synthesis:
 	rm -rf build/vlsi_polito_mage/syn-design_compiler buildsim.log builddesigncompiler.log
+
+flist:
+	rm -f Flist.mage && \
+	rm -f Bender.lock && \
+	bender script flist > Flist.mage
+
+flist-relative:
+	rm -f Flist.mage && \
+	rm -f Bender.lock && \
+	bender script flist --relative-path > Flist.mage
+
+check-verilator: flist
+	verilator --lint-only -Wno-fatal --error-limit 0 waivers.vlt -f Flist.mage --top-module mage_axi_wrapper 2>&1 | tee verilator_lint.log
+
+clean-repo: clean-build clean-synthesis
+	rm -rf .bender

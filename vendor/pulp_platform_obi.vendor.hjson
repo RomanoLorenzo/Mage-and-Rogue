@@ -1,0 +1,17 @@
+// Copyright 2022 Thales DIS France SAS
+// SPDX-License-Identifier: Apache-2.0 WITH SHL-2.0.
+{
+  name: "pulp_platform_obi",
+  target_dir: "pulp_platform_obi",
+
+  upstream: {
+    url: "https://github.com/pulp-platform/obi.git",
+    rev: "v0.1.7",
+  },
+
+  mapping: [
+    {from: 'include', to: 'include' },
+    {from: 'src/obi_mux.sv', to: 'src/obi_mux.sv' },
+  ]
+}
+
