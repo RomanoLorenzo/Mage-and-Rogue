@@ -21,7 +21,7 @@ re-vendor:
 	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_axi_obi.vendor.hjson -v --update; \
 	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_obi.vendor.hjson -v --update;
 
-rv:
+re-vendor-quick:
 	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_register_interface.vendor.hjson -v --update; \
 	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_common_cells.vendor.hjson -v --update; \
 	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_tech_cells_generic.vendor.hjson -v --update; \
@@ -41,7 +41,6 @@ mage-gen:
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage --tpl-sv hw/mage/dmem_decoder.sv.tpl 
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_top.sv.tpl 
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_wrapper.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_axi_wrapper.sv.tpl 
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/configuration --tpl-sv hw/mage/configuration/mage_regs.hjson.tpl 
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/access --tpl-sv hw/mage/access/agu.sv.tpl 
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/access --tpl-sv hw/mage/access/cfg_dispatcher.sv.tpl 

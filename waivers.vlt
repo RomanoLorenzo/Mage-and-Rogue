@@ -1,6 +1,0 @@
-`verilator_config
-
-lint_off -rule UNOPTFLAT -file "*/vendor/pulp_platform_axi/src/axi_demux_simple.sv"
-lint_off -rule UNOPTFLAT -file "*/vendor/pulp_platform_common_cells/src/rr_arb_tree.sv"
-lint_off -rule UNOPTFLAT -file "*/vendor/pulp_platform_common_cells/src/stream_mux.sv"
-lint_off -rule UNOPTFLAT -file "*/vendor/pulp_platform_common_cells/src/stream_fifo.sv"

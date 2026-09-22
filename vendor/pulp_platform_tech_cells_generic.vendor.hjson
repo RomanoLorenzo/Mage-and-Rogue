@@ -9,15 +9,11 @@
     rev: "v0.2.11",
   },
 
-  exclude_from_upstream: [
-    "Bender.yml",
-    "scripts",
-    "src_files.yml",
-    "test",
-    "fpga",
-    "deprecated",
-    "rtl/tc_sram_impl.sv",
-    "tc_pwr.sv",
+  mapping: [
+    {from: 'src/rtl/tc_sram.sv', to: 'src/rtl/tc_sram.sv' },
+
+    {from: 'LICENSE', to: 'LICENSE' },
   ]
+
 }
 

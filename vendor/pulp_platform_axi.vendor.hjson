@@ -14,6 +14,8 @@
     {from: 'src/axi_pkg.sv', to: 'src/axi_pkg.sv' },
     {from: 'src/axi_to_detailed_mem.sv', to: 'src/axi_to_detailed_mem.sv' },
     {from: 'src/axi_demux_simple.sv', to: 'src/axi_demux_simple.sv' },
+
+    {from: 'LICENSE', to: 'LICENSE' },
   ]
 }
 

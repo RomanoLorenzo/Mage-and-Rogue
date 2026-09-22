@@ -1,7 +1,7 @@
-+incdir+/home/lorenzo_administrator/VLSILAB_Intern/projects/cva6_and_mage/ips/Mage-and-Rogue/vendor/pulp_platform_axi/include
-+incdir+/home/lorenzo_administrator/VLSILAB_Intern/projects/cva6_and_mage/ips/Mage-and-Rogue/vendor/pulp_platform_register_interface/include
 +incdir+/home/lorenzo_administrator/VLSILAB_Intern/projects/cva6_and_mage/ips/Mage-and-Rogue/vendor/pulp_platform_common_cells/include
 +incdir+/home/lorenzo_administrator/VLSILAB_Intern/projects/cva6_and_mage/ips/Mage-and-Rogue/vendor/pulp_platform_obi/include
++incdir+/home/lorenzo_administrator/VLSILAB_Intern/projects/cva6_and_mage/ips/Mage-and-Rogue/vendor/pulp_platform_axi/include
++incdir+/home/lorenzo_administrator/VLSILAB_Intern/projects/cva6_and_mage/ips/Mage-and-Rogue/vendor/pulp_platform_register_interface/include
 /home/lorenzo_administrator/VLSILAB_Intern/projects/cva6_and_mage/ips/Mage-and-Rogue/vendor/pulp_platform_common_cells/src/cf_math_pkg.sv
 /home/lorenzo_administrator/VLSILAB_Intern/projects/cva6_and_mage/ips/Mage-and-Rogue/hw/mage/packages/agu_pkg.sv
 /home/lorenzo_administrator/VLSILAB_Intern/projects/cva6_and_mage/ips/Mage-and-Rogue/hw/mage/packages/pea_pkg.sv
