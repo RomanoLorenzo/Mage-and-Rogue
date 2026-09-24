@@ -10,8 +10,8 @@
   },
 
   mapping: [
-    {from: 'src/axi_to_detailed_mem_user.sv', to: 'src/axi_to_detailed_mem_user.sv' },
-    {from: 'src/axi_to_obi.sv', to: 'src/axi_to_obi.sv' },
+    {from: 'src/axi_to_detailed_mem_user.sv', to: 'src/mage_axi_to_detailed_mem_user.sv' },
+    {from: 'src/axi_to_obi.sv', to: 'src/mage_axi_to_obi.sv' },
 
     {from: 'LICENSE', to: 'LICENSE' },
   ]

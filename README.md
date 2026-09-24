@@ -37,3 +37,41 @@ It is in charge of computing addresses to access the internal multi-bank scratch
 - **Generalized Memory Partitioning (GMP):**  
   Within the internal scratchpad memory (SpM), arrays are mapped across multiple banks using the GMP scheme, which distributes data blocks in a way that minimizes access conflicts and maximizes memory bandwidth.
 
+
+## Struttura della repo
+
+L'infrastruttura di build e dipendenze è ora organizzata come segue:
+
+1. **Vendoring selettivo (`vendor/*.vendor.hjson`):**
+   - Non viene utilizzato FuseSoC per scaricare i sorgenti esterni, bensì lo script OpenTitan `util/vendor.py`.
+   - I file `.vendor.hjson` specificano i repository Git a monte, il commit/tag di riferimento (`rev`) e un campo `mapping:` che estrae chirurgicamente solo i singoli file necessari (es. in `pulp_platform_tech_cells_generic.vendor.hjson` viene mappato solo `src/rtl/mage_tc_sram.sv`).
+   - Il target `make re-vendor` (o `re-vendor-quick`) popola la directory locale `vendor/` e congela gli hash nei file `.lock.hjson`.
+
+2. **Generazione RTL e Registri (`mage-gen` / `regtool`):**
+   - `util/mage-gen.py` genera i file `.sv` definitivi partendo dai template `.sv.tpl` e dalla configurazione hardware.
+   - `util/regtool.py`genera l'interfaccia registri `mage_regs.hjson` e il file `mage_reg_top.sv`.
+
+3. **Gestione con Bender e Manifest (`Bender.yml`):**
+   - `Bender.yml` non dichiara dipendenze esterne dinamiche (il blocco `dependencies:` è assente), bensì agisce da **manifest statico**: elenca in `sources: files:` tutti i file necessari (sia i vendorizzati sia i file interni di Mage) in ordine topologico di compilazione (prima i package `*_pkg.sv`, poi le primitive, i sottomoduli di accesso/calcolo, la memoria, fino ai wrapper top-level).
+   - I target `make flist` e `make flist-relative` eseguono `bender script flist` per produrre il file `Flist.mage`.
+
+4. **Validazione Standalone (`waivers.vlt`):**
+   - Il target `make check-verilator` compila `hw/mage_axi_wrapper.sv` con Verilator in modalità `--lint-only`. Eseguendo il comando, il linting in modalità standalone **passa con successo (exit code 0)**.
+
+### Dipendenze
+Questo progetto dipende da:
+- `lowRISC/opentitan` @ commit hash: `47a0f4798febd9e53dd131ef8c8c2b0255d8c139`
+- `pulp-platform/axi_obi` @ version: `v0.1.0`
+- `pulp-platform/axi` @ version: `v0.39.8`
+- `pulp-platform/common_cells` @ version: `v1.38.0`
+- `pulp-platform/obi` @ version: `v0.1.7`
+- `pulp-platform/register_interface` @ version: `v0.4.7`
+- `pulp-platform/tech_cells_generic` @ version: `v0.2.11`
+
+## Comandi
+Dalla root ./ esegui:
+- `make re-vendor`: scaricare/aggiornare le dipendenze.
+- `make mage-gen`: generare la configurazione di mage specificata nella variabile `MAGE_CFG_HJSON` del `Makefile`.
+- `make flist-local`: genera `Flist-local.mage` per compilazione locale di Verilator a partire dal `Bender-local.yml` file.
+- `make check-verilator`: controlla che tutti i file compilino e le dipendenze siano risolte. Archivia i _Warning_ in `verilator_lint.log`. Nota: il file `waivers.vlt` è lasciato vuoto on-purpose per segnalare tutti i warnings.
+- `make clean-repo`: per cancellare le cartelle di build e sintesi e cancellare i file/cartelle gitignorati.

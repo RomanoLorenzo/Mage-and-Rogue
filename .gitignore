@@ -1,12 +1,6 @@
 /build
 *.log
-/vendor/*
-!/vendor/*.vendor.hjson
-!/vendor/*.lock.hjson
-!/vendor/lowrisc_opentitan/Bender.yml
-!/vendor/pulp_platform_register_interface/Bender.yml
-!/vendor/pulp_platform_commmon_cells/Bender.yml
-!/vendor/pulp_platform_tech_cells_generic/Bender.yml
+vendor/*.hjson
 .vscode
 vivado.jou
 vivado.log

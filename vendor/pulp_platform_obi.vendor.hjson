@@ -11,7 +11,7 @@
 
   mapping: [
     {from: 'include', to: 'include' },
-    {from: 'src/obi_mux.sv', to: 'src/obi_mux.sv' },
+    {from: 'src/obi_mux.sv', to: 'src/mage_obi_mux.sv' },
 
     {from: 'LICENSE', to: 'LICENSE' },
   ]

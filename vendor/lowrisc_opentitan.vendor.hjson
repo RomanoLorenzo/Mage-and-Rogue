@@ -11,10 +11,10 @@
   },
 
   mapping: [
-    {from: 'hw/ip/prim/rtl/prim_subreg.sv', to: 'src/prim_subreg.sv' },
-    {from: 'hw/ip/prim/rtl/prim_subreg_arb.sv', to: 'src/prim_subreg_arb.sv' },
-    {from: 'hw/ip/prim/rtl/prim_subreg_ext.sv', to: 'src/prim_subreg_ext.sv' },
-    {from: 'hw/ip/prim/rtl/prim_subreg_shadow.sv', to: 'src/prim_subreg_shadow.sv' },
+    {from: 'hw/ip/prim/rtl/prim_subreg.sv', to: 'src/mage_prim_subreg.sv' },
+    {from: 'hw/ip/prim/rtl/prim_subreg_arb.sv', to: 'src/mage_prim_subreg_arb.sv' },
+    {from: 'hw/ip/prim/rtl/prim_subreg_ext.sv', to: 'src/mage_prim_subreg_ext.sv' },
+    {from: 'hw/ip/prim/rtl/prim_subreg_shadow.sv', to: 'src/mage_prim_subreg_shadow.sv' },
 
     {from: 'LICENSE', to: 'LICENSE' },
   ]

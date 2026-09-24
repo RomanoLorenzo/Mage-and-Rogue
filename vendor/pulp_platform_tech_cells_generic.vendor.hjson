@@ -10,7 +10,7 @@
   },
 
   mapping: [
-    {from: 'src/rtl/tc_sram.sv', to: 'src/rtl/tc_sram.sv' },
+    {from: 'src/rtl/tc_sram.sv', to: 'src/rtl/mage_tc_sram.sv' },
 
     {from: 'LICENSE', to: 'LICENSE' },
   ]

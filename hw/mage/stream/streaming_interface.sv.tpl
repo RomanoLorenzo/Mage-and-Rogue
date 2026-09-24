@@ -96,7 +96,7 @@ module streaming_interface
   genvar rf;
   generate
     for (rf = 0; rf < N_DMA_CH; rf++) begin : gen_hw_r_fifo
-      fifo_v3 #(
+      mage_fifo_v3 #(
           .DEPTH(4),
           .FALL_THROUGH(1'b0),
           .DATA_WIDTH(32)
@@ -120,7 +120,7 @@ module streaming_interface
   genvar wf;
   generate
     for (wf = 0; wf < N_DMA_CH; wf++) begin : gen_hw_w_fifo
-      fifo_v3 #(
+      mage_fifo_v3 #(
           .DEPTH(4),
           .FALL_THROUGH(1'b0),
           .DATA_WIDTH(32)

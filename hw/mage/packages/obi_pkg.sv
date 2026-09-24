@@ -115,7 +115,7 @@ package obi_pkg;
         CombGnt: ObiCfgIn.CombGnt,
         AddrWidth: ObiCfgIn.AddrWidth,
         DataWidth: ObiCfgIn.DataWidth,
-        IdWidth: ObiCfgIn.IdWidth + cf_math_pkg::idx_width(NumManagers),
+        IdWidth: ObiCfgIn.IdWidth + mage_cf_math_pkg::idx_width(NumManagers),
         Integrity: ObiCfgIn.Integrity,
         BeFull: ObiCfgIn.BeFull,
         OptionalCfg: ObiCfgIn.OptionalCfg
