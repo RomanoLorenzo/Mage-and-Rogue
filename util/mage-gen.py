@@ -500,13 +500,19 @@ def main():
             level += 1
         return result
 
+    # dae_params/streaming_params are only meaningful for their own mode: a DAE
+    # config need not carry streaming_params, and vice versa. Read both
+    # defensively so either section may be entirely absent.
+    dae_params = cfg.get('dae_params', {})
+    streaming_params = cfg.get('streaming_params', {})
+
     kwargs = {
         "dae_cgra"                         : cfg['dae_cgra'],
         "streaming_cgra"                   : cfg['streaming_cgra'],
-        
+
         "format_full"                      : cfg['format_full'],
         "format_part"                      : cfg['format_part'],
-        
+
         "gemm_computation"                 : cfg['gemm_computation'],
         "activation_computation"           : cfg['activation_computation'],
         "has_delay_pe"                     : cfg['has_delay_pe'],
@@ -515,44 +521,46 @@ def main():
         "n_pea_cols"                       : cfg['common_params']['n_pea_cols'],
         "n_neigh_pe"                       : cfg['common_params']['n_neigh_pe'],
         "pattern_neigh_pe"                 : cfg['common_params']['pattern_neigh_pe'],
+        # shared by both modes (e.g. KMEM_SIZE sizing in pea_pkg.sv.tpl), so it
+        # lives in common_params rather than dae_params/streaming_params.
+        "kernel_len"                       : cfg['common_params']['kernel_len'],
 
-        "kernel_len"                       : cfg['dae_params']['kernel_len'],
-        "n_pe_in_mem"                      : cfg['dae_params']['n_pe_in_mem'],
-        "n_streams"                        : cfg['dae_params']['n_streams'],
-        "pea_in_mem_placement"             : cfg['dae_params']['pea_in_mem_placement'],
-        "n_age_per_stream_ds"              : cfg['dae_params']['n_age_per_stream_ds'],
-        "n_age_tot"                        : cfg['dae_params']['n_age_tot'],
-        "n_age_per_stream"                 : cfg['dae_params']['n_age_per_stream'],
-        "num_words"                        : cfg['dae_params']['num_words'],
-        "acc_pes"                          : cfg['dae_params']['acc_pes'],
+        "n_pe_in_mem"                      : dae_params.get('n_pe_in_mem', 0),
+        "n_streams"                        : dae_params.get('n_streams', 0),
+        "pea_in_mem_placement"             : dae_params.get('pea_in_mem_placement', []),
+        "n_age_per_stream_ds"              : dae_params.get('n_age_per_stream_ds', []),
+        "n_age_tot"                        : dae_params.get('n_age_tot', 0),
+        "n_age_per_stream"                 : dae_params.get('n_age_per_stream', 0),
+        "num_words"                        : dae_params.get('num_words', 1024),
+        "acc_pes"                          : dae_params.get('acc_pes', []),
 
-        "n_pe_in_stream"                   : cfg['streaming_params']['n_pe_in_stream'],
-        "r_fifo_synch_placement_g2"        : cfg['streaming_params']['r_fifo_synch_placement_g2'],
-        "r_fifo_synch_placement_g3"        : cfg['streaming_params']['r_fifo_synch_placement_g3'],
-        "r_fifo_synch_placement_g4"        : cfg['streaming_params']['r_fifo_synch_placement_g4'],
-        "r_fifo_synch_placement_type"      : cfg['streaming_params']['r_fifo_synch_placement_type'],
-        "pea_in_stream_placement"          : cfg['streaming_params']['pea_in_stream_placement'],
-        "n_dma_ch"                         : cfg['streaming_params']['n_dma_ch'],
-        "n_in_stream"                      : cfg['streaming_params']['n_in_stream'],
-        "n_dma_ch_per_in_stream"           : cfg['streaming_params']['n_dma_ch_per_in_stream'],
-        "n_pea_din_per_in_stream"          : cfg['streaming_params']['n_pea_din_per_in_stream'],
-        "n_out_stream"                     : cfg['streaming_params']['n_out_stream'],
-        "n_pea_dout_per_out_stream"        : cfg['streaming_params']['n_pea_dout_per_out_stream'],
-        "n_dma_ch_per_out_stream"          : cfg['streaming_params']['n_dma_ch_per_out_stream'],
-        "in_stream_xbar"                   : cfg['streaming_params']['in_stream_xbar'],
-        "out_stream_xbar"                  : cfg['streaming_params']['out_stream_xbar'],
-        "div_pes"                          : cfg['streaming_params']['div_pes'],
-        "bst_pes"                          : _collect_bst_pes(cfg['streaming_params']),
-        "coeff_pes"                        : cfg['streaming_params'].get('coeff_pes', []),
-        "num_m_coeffs"                     : cfg['streaming_params'].get('num_m_coeffs', []),
-        "num_q_coeffs"                     : cfg['streaming_params'].get('num_q_coeffs', []),
-        "part_add_pes"                     : cfg['streaming_params']['part_add_pes'],
-        "part_mul_pes"                     : cfg['streaming_params']['part_mul_pes'],
-        "is_div_pipe"                      : cfg['streaming_params']['is_div_pipe'],
-        "in_stream_dma_ch_placement"       : cfg['streaming_params']['in_stream_dma_ch_placement'],
-        "out_stream_pea_dout_placement"    : cfg['streaming_params']['out_stream_pea_dout_placement'],
-        "pe_variants"                      : cfg['streaming_params'].get('pe_variants', []),
-        "fu_variants"                      : cfg['streaming_params'].get('fu_variants', []),
+        "n_pe_in_stream"                   : streaming_params.get('n_pe_in_stream', 0),
+        "r_fifo_synch_placement_g2"        : streaming_params.get('r_fifo_synch_placement_g2', []),
+        "r_fifo_synch_placement_g3"        : streaming_params.get('r_fifo_synch_placement_g3', []),
+        "r_fifo_synch_placement_g4"        : streaming_params.get('r_fifo_synch_placement_g4', []),
+        "r_fifo_synch_placement_type"      : streaming_params.get('r_fifo_synch_placement_type', "g2"),
+        "pea_in_stream_placement"          : streaming_params.get('pea_in_stream_placement', []),
+        "n_dma_ch"                         : streaming_params.get('n_dma_ch', 0),
+        "n_in_stream"                      : streaming_params.get('n_in_stream', 0),
+        "n_dma_ch_per_in_stream"           : streaming_params.get('n_dma_ch_per_in_stream', 0),
+        "n_pea_din_per_in_stream"          : streaming_params.get('n_pea_din_per_in_stream', 0),
+        "n_out_stream"                     : streaming_params.get('n_out_stream', 0),
+        "n_pea_dout_per_out_stream"        : streaming_params.get('n_pea_dout_per_out_stream', 0),
+        "n_dma_ch_per_out_stream"          : streaming_params.get('n_dma_ch_per_out_stream', 0),
+        "in_stream_xbar"                   : streaming_params.get('in_stream_xbar', 0),
+        "out_stream_xbar"                  : streaming_params.get('out_stream_xbar', 0),
+        "div_pes"                          : streaming_params.get('div_pes', []),
+        "bst_pes"                          : _collect_bst_pes(streaming_params),
+        "coeff_pes"                        : streaming_params.get('coeff_pes', []),
+        "num_m_coeffs"                     : streaming_params.get('num_m_coeffs', []),
+        "num_q_coeffs"                     : streaming_params.get('num_q_coeffs', []),
+        "part_add_pes"                     : streaming_params.get('part_add_pes', []),
+        "part_mul_pes"                     : streaming_params.get('part_mul_pes', []),
+        "is_div_pipe"                      : streaming_params.get('is_div_pipe', 0),
+        "in_stream_dma_ch_placement"       : streaming_params.get('in_stream_dma_ch_placement', []),
+        "out_stream_pea_dout_placement"    : streaming_params.get('out_stream_pea_dout_placement', []),
+        "pe_variants"                      : streaming_params.get('pe_variants', []),
+        "fu_variants"                      : streaming_params.get('fu_variants', []),
     }
 
     ###########

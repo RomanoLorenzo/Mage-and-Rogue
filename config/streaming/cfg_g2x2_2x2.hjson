@@ -9,7 +9,6 @@
 
 {
 
-
     dae_cgra : 0,
     streaming_cgra : 1,
 
@@ -21,22 +20,11 @@
     has_delay_pe : 1,
 
     common_params: {
+        kernel_len : 1,
         n_pea_rows: 2,
         n_pea_cols: 2,
         n_neigh_pe: 4,
         pattern_neigh_pe: ["UP", "LEFT", "RIGHT", "DOWN"],
-    },
-
-    dae_params: {
-        kernel_len : 1,
-        n_age_tot : 4,
-        n_age_per_stream : 2,
-        n_streams : 2,
-        n_pe_in_mem : 4,
-        n_age_per_stream_ds : [2, 2],
-        acc_pes : [],
-        pea_in_mem_placement : [[0, 1, 2, 3], [0, 1, 2, 3]],
-        num_words : 1024,
     },
 
     streaming_params: {
@@ -64,5 +52,4 @@
         out_stream_pea_dout_placement : [[0, 1], [0, 1]],
         pea_in_stream_placement : [[0, 1], [1, 0]],
     },
-
 }
