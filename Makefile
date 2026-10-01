@@ -119,6 +119,29 @@ rogue-gen-sw:
 verible:
 	util/format-verible;
 
+### Spells (kernel configurations, see sw/spells/) ###
+# APP names the kernel; its spell lives in sw/spells/<dae|streaming>/$(APP),
+# the arch being taken from the directory of MAGE_CFG_HJSON.
+SPELL_ARCH = $(notdir $(patsubst %/,%,$(dir $(MAGE_CFG_HJSON))))
+SPELL_DIR ?= sw/spells/$(SPELL_ARCH)/$(APP)
+
+# Regenerates MageSpellBuilder.py for MAGE_CFG_HJSON; creates the spell.py
+# scaffold only if the kernel doesn't have one yet (it is hand-written).
+spell-gen:
+	@test -n "$(APP)" || (echo "Usage: make spell-gen APP=<kernel> MAGE_CFG_HJSON=config/<dae|streaming>/<cfg>.hjson" && exit 1)
+	mkdir -p $(SPELL_DIR)
+	$(PYTHON) util/spell-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir $(SPELL_DIR) --tpl-sv sw/spells/MageSpellBuilder.py.tpl
+	@if [ -e $(SPELL_DIR)/spell.py ]; then \
+		echo "$(SPELL_DIR)/spell.py already exists, not overwriting it"; \
+	else \
+		$(PYTHON) util/spell-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir $(SPELL_DIR) --tpl-sv sw/spells/spell.py.tpl; \
+	fi
+
+# Runs spell.py, producing spell.c next to it.
+spell-run:
+	@test -n "$(APP)" || (echo "Usage: make spell-run APP=<kernel> MAGE_CFG_HJSON=config/<dae|streaming>/<cfg>.hjson" && exit 1)
+	$(PYTHON) $(SPELL_DIR)/spell.py
+
 verilator-sim:
 	$(FUSESOC) --cores-root . run --no-export --target=sim --tool=verilator $(FUSESOC_FLAGS) --setup --build $(MAGE_CORE)  2>&1 | tee buildsim.log
 

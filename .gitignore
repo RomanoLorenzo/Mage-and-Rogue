@@ -36,3 +36,6 @@ vivado.log
 /sw/mage_params.h
 
 mage-stream.core
+
+/sw/spells/**/MageSpellBuilder.py
+__pycache__/
