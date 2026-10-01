@@ -72,6 +72,16 @@ PE_VARIANT_TABLE = {
         "coeff":   False,
         "bst_lvl":   1
     },
+    "pe_s_part_gemm_mul_bst_0": {
+        "fu_module": "fu_s_part_gemm_mul_bst_0",
+        "fu_inst":   "fu_wrapper_i",
+        "has_part_vec_mode": True,
+        "has_div_support":   False,
+        "div_is_pipelined":  False,
+        "description": "PE for streaming mode supporting int32/int16/int8 mul and int32 gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   0
+    },
     "pe_s_part_gemm_add_bst_3": {
         "fu_module": "fu_s_part_gemm_add_bst_3",
         "fu_inst":   "fu_wrapper_i",
@@ -225,6 +235,13 @@ FU_VARIANT_TABLE = {
         "description": "FU for streaming mode supporting int32/int16/int8 mul and int32 computation of classic gemm-related operations",
         "coeff":   False,
         "bst_lvl":   1
+    },
+    "fu_s_part_gemm_mul_bst_0": {
+        "arith_type":    "part_mul",
+        "divider_type":  "none",
+        "description": "FU for streaming mode supporting int32/int16/int8 mul and int32 computation of classic gemm-related operations",
+        "coeff":   False,
+        "bst_lvl":   0
     },
     "fu_s_part_gemm_add_bst_3": {
         "arith_type":    "part_add",
