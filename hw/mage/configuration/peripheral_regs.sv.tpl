@@ -53,6 +53,7 @@ module peripheral_regs
   %endif
     output loop_vars_t [N_LP-1:0] reg_loop_vars_o,
     output logic [N_AGE_TOT-1:0][N_IVS-1:0][NBIT_LP_IV-1:0] reg_age_strides_o,
+    output logic [N_AGE_TOT-1:0][N_IVS-1:0] reg_age_stride_mode_o,
     output logic [N_AGE_TOT-1:0][LOG2_HWLP_RF_SIZE-1:0] reg_age_acc_hwlp_sel_o,
     output logic [ACC_CFGMEM_SIZE-1:0][N_AGE_TOT-1:0][NBIT_CFG_STREAM_WORD-1:0] reg_agu_cfgmem_o,
     ////////////////////////////////
@@ -81,6 +82,25 @@ module peripheral_regs
     input logic [N-1:0][M-1:0] reg_pea_rf_de_i,
     input logic [N-1:0][M-1:0][31:0] reg_pea_rf_d_i,
     output logic [N-1:0][M-1:0][31:0] reg_pea_rf_o,
+
+    % for level, pes in enumerate(bst_pes):
+    <%  n_bp = 2 ** level %>\
+    %   for pe_id in pes:
+    %     if n_bp == 1:
+        output logic            [N_BITS-1:0] reg_pe_${pe_id}_bst_${level}_bp_o,
+    %     else:
+        output logic [${n_bp-1}:0][N_BITS-1:0] reg_pe_${pe_id}_bst_${level}_bp_o,
+    %     endif
+    %   endfor
+    % endfor
+
+    % for pe_id, n_m, n_q in zip(coeff_pes, num_m_coeffs, num_q_coeffs):
+        output logic [${n_m}-1:0][N_BITS-1:0] reg_pe_${pe_id}_m_coeffs_o,
+    %   if n_q > 0:
+        output logic [${n_q}-1:0][N_BITS-1:0] reg_pe_${pe_id}_q_coeffs_o,
+    %   endif
+    % endfor
+
   %if out_stream_xbar == 1:
     output logic [N_OUT_STREAM-1:0][N_DMA_CH_PER_OUT_STREAM-1:0][LOG_N_PEA_DOUT_PER_OUT_STREAM-1:0] reg_out_stream_sel_o,
   %endif
@@ -152,6 +172,16 @@ module peripheral_regs
   %for i in range(4):
     reg_age_strides_o[${s}][${i}] = reg2hw.strides[${s}].s${i}.q;
   %endfor
+%endfor
+
+    ////////////////////////////////
+    //     AGE Stride Modes       //
+    ////////////////////////////////
+%for s in range(n_age_tot):
+    reg_age_stride_mode_o[${s}][0] = reg2hw.stride_mode[${s}].m0.q;
+    reg_age_stride_mode_o[${s}][1] = reg2hw.stride_mode[${s}].m1.q;
+    reg_age_stride_mode_o[${s}][2] = reg2hw.stride_mode[${s}].m2.q;
+    reg_age_stride_mode_o[${s}][3] = reg2hw.stride_mode[${s}].m3.q;
 %endfor
 
     ////////////////////////////////
@@ -263,6 +293,31 @@ module peripheral_regs
     %endfor
   %endif
 %endif
+
+% for level, pes in enumerate(bst_pes):
+<%  n_bp = 2 ** level %>\
+%   for pe_id in pes:
+%     if n_bp == 1:
+    reg_pe_${pe_id}_bst_${level}_bp_o = reg2hw.pe_${pe_id}_bst_${level}_bp.q;
+%     else:
+%       for i in range(n_bp):
+    reg_pe_${pe_id}_bst_${level}_bp_o[${i}] = reg2hw.pe_${pe_id}_bst_${level}_bp[${i}].q;
+%       endfor
+%     endif
+%   endfor
+% endfor
+
+
+% for pe_id, n_m, n_q in zip(coeff_pes, num_m_coeffs, num_q_coeffs):
+%   for i in range(n_m):
+    reg_pe_${pe_id}_m_coeffs_o[${i}] = reg2hw.pe_${pe_id}_m_coeffs[${i}].q;
+%   endfor
+%   if n_q > 0:
+%     for i in range(n_q):
+    reg_pe_${pe_id}_q_coeffs_o[${i}] = reg2hw.pe_${pe_id}_q_coeffs[${i}].q;
+%     endfor
+%   endif
+% endfor
 
     ////////////////////////////////
     //            PEA             //

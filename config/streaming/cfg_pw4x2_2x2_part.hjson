@@ -1,0 +1,62 @@
+// Copyright 2022 EPFL and Politecnico di Torino.
+// Solderpad Hardware License, Version 2.1, see LICENSE.md for details.
+// SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
+//
+// File: mage_cgf.hjson
+// Author: Alessio Naclerio
+// Date: 11/07/2025
+// Description: Configuration file for Mage
+
+{
+
+    dae_cgra : 0,
+    streaming_cgra : 1,
+
+    format_full : 0,
+    format_part : 1,
+
+    gemm_computation : 0,
+    activation_computation : 1,
+    has_delay_pe : 1,
+
+    common_params: {
+        kernel_len : 1,
+        n_pea_rows: 4,
+        n_pea_cols: 2,
+        n_neigh_pe: 4,
+        pattern_neigh_pe: ["UP", "LEFT", "RIGHT", "DOWN"],
+    },
+
+    streaming_params: {
+        n_pe_in_stream: 2,
+        in_stream_xbar: 0,
+        out_stream_xbar: 1,
+        n_dma_ch: 2,
+        n_in_stream: 2,
+        n_dma_ch_per_in_stream: 1,
+        n_pea_din_per_in_stream: 1,
+        n_out_stream: 2,
+        n_pea_dout_per_out_stream: 2,
+        n_dma_ch_per_out_stream: 1,
+        div_pes : [],
+        part_add_pes : [2],
+        part_mul_pes : [0],
+        bst_0_pes : [0],
+        bst_1_pes : [1],
+        bst_2_pes : [3],
+        bst_3_pes : [2],
+        coeff_pes : [4,6],
+        num_m_coeffs  : [16,16],
+        num_q_coeffs  : [16,0],
+        is_div_pipe: 0,
+        pe_variants : ["pe_s_full_gemm", "pe_s_full_gemm_m16_q16", "pe_s_full_gemm_m16_q0", "pe_s_full_gemm_bst_1", "pe_s_full_gemm_bst_2", "pe_s_part_gemm_add_bst_3", "pe_s_part_gemm_mul_bst_0"],
+        fu_variants : ["fu_s_full_gemm", "fu_s_full_gemm_m16_q16", "fu_s_full_gemm_m16_q0", "fu_s_full_gemm_bst_1", "fu_s_full_gemm_bst_2", "fu_s_part_gemm_add_bst_3", "fu_s_part_gemm_mul_bst_0"],
+        in_stream_dma_ch_placement : [[0], [1], [2], [3]],
+        out_stream_pea_dout_placement : [[0, 1], [0, 1], [2, 3], [2, 3]],
+        r_fifo_synch_placement_type : "g2",
+        r_fifo_synch_placement_g2 : [[0, 1], [1, 0], [2, 3], [3, 2]],
+        r_fifo_synch_placement_g3 : [[0, 1, 2], [1, 0, 2], [2, 0, 1], [3, 2, 1]],
+        r_fifo_synch_placement_g4 : [[0, 1, 2, 3], [1, 0, 2, 3], [2, 3, 0, 1], [3, 2, 0, 1]],
+        pea_in_stream_placement : [[0, 1], [1, 0], [2, 3], [3, 2]],
+    },
+}

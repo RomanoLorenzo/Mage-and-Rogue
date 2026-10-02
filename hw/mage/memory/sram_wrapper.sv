@@ -30,7 +30,7 @@ module sram_wrapper #(
     output logic [31:0] rdata_o
 );
 
-  mage_tc_sram #(
+  tc_sram #(
       .NumWords (NumWords),
       .DataWidth(DataWidth),
       .NumPorts (32'd1)

@@ -70,6 +70,7 @@ module mage_top
   %endif
   loop_vars_t [N_LP-1:0] reg_loop_vars;
   logic [N_AGE_TOT-1:0][N_IVS-1:0][NBIT_LP_IV-1:0] reg_age_strides;
+  logic [N_AGE_TOT-1:0][N_IVS-1:0] reg_age_stride_mode;
   logic [N_AGE_TOT-1:0][LOG2_HWLP_RF_SIZE-1:0] reg_age_acc_hwlp_sel;
   logic [ACC_CFGMEM_SIZE-1:0][N_AGE_TOT-1:0][NBIT_CFG_STREAM_WORD-1:0] reg_mage_cfgmem;
   ////////////////////////////////////////////////////////////////
@@ -162,7 +163,24 @@ module mage_top
   logic [N-1:0][M-1:0][31:0] reg_rf_in_pea;
   logic [N-1:0][M-1:0][31:0] reg_rf_d_pea;
   logic [N-1:0][M-1:0]       reg_rf_de_pea;
+% for level, pes in enumerate(bst_pes):
+<%  n_bp = 2 ** level %>\
+%   for pe_id in pes:
+%     if n_bp == 1:
+  logic            [N_BITS-1:0] reg_pe_${pe_id}_bst_${level}_bp;
+%     else:
+  logic [${n_bp-1}:0][N_BITS-1:0] reg_pe_${pe_id}_bst_${level}_bp;
+%     endif
+%   endfor
+% endfor
 %endif
+
+% for pe_id, n_m, n_q in zip(coeff_pes, num_m_coeffs, num_q_coeffs):
+  logic [${n_m}-1:0][N_BITS-1:0] reg_pe_${pe_id}_m_coeffs;
+%   if n_q > 0:
+  logic [${n_q}-1:0][N_BITS-1:0] reg_pe_${pe_id}_q_coeffs;
+%   endif
+% endfor
 
   ////////////////////////////////////////////////////////////////
   //              CSR and Configuration Registers               //
@@ -198,6 +216,7 @@ module mage_top
   %endif
       .reg_loop_vars_o(reg_loop_vars),
       .reg_age_strides_o(reg_age_strides),
+      .reg_age_stride_mode_o(reg_age_stride_mode),
       .reg_age_acc_hwlp_sel_o(reg_age_acc_hwlp_sel),
       .reg_agu_cfgmem_o(reg_mage_cfgmem),
       ////////////////////////////////////////////////////////////////
@@ -222,6 +241,22 @@ module mage_top
       .reg_pea_rf_de_i(reg_rf_de_pea),
       .reg_pea_rf_d_i(reg_rf_d_pea),
       .reg_pea_rf_o(reg_rf_in_pea),
+% for level, pes in enumerate(bst_pes):
+<%  n_bp = 2 ** level %>\
+%   for pe_id in pes:
+%     if n_bp == 1:
+      .reg_pe_${pe_id}_bst_${level}_bp_o(reg_pe_${pe_id}_bst_${level}_bp),
+%     else:
+      .reg_pe_${pe_id}_bst_${level}_bp_o(reg_pe_${pe_id}_bst_${level}_bp),
+%     endif
+%   endfor
+% endfor
+% for pe_id, n_m, n_q in zip(coeff_pes, num_m_coeffs, num_q_coeffs):
+      .reg_pe_${pe_id}_m_coeffs_o(reg_pe_${pe_id}_m_coeffs),
+%   if n_q > 0:
+      .reg_pe_${pe_id}_q_coeffs_o(reg_pe_${pe_id}_q_coeffs),
+%   endif
+% endfor
   %if out_stream_xbar == 1:
       .reg_out_stream_sel_o(reg_out_stream_sel),
   %endif
@@ -323,6 +358,22 @@ module mage_top
       .stream_data_i(stream_pea_data_in),
       .pea_ready_o(pea_ready),
       .stream_intf_ready_i(stream_intf_ready),
+% for level, pes in enumerate(bst_pes):
+<%  n_bp = 2 ** level %>\
+%   for pe_id in pes:
+%     if n_bp == 1:
+    .reg_pe_${pe_id}_bst_${level}_bp_i(reg_pe_${pe_id}_bst_${level}_bp),
+%     else:
+    .reg_pe_${pe_id}_bst_${level}_bp_i(reg_pe_${pe_id}_bst_${level}_bp),
+%     endif
+%   endfor
+% endfor
+% for pe_id, n_m, n_q in zip(coeff_pes, num_m_coeffs, num_q_coeffs):
+    .reg_pe_${pe_id}_m_coeffs_i(reg_pe_${pe_id}_m_coeffs),
+%   if n_q > 0:
+    .reg_pe_${pe_id}_q_coeffs_i(reg_pe_${pe_id}_q_coeffs),
+%   endif
+% endfor
 %endif
 %if dae_cgra == 1:
       .start_d_i(start_d),
@@ -354,6 +405,7 @@ module mage_top
       .cfgmem_addr_d_o(cfg_addr),
 % endif
       .reg_age_strides_i(reg_age_strides),
+      .reg_age_stride_mode_i(reg_age_stride_mode),
       .reg_age_acc_hwlp_sel_i(reg_age_acc_hwlp_sel),
       .reg_II_i(reg_II),
       .cfgmem_content_i(reg_mage_cfgmem),

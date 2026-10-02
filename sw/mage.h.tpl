@@ -176,12 +176,33 @@ void mage_set_all_age_strides(uint32_t strides[MAGE_N_AGES]);
 
 /**
  * @brief Sets the strides for an Address Generation Engine (AGE).
- * 
+ *
  * @param stream_id The stream ID.
  * @param age_id The age ID.
  * @param strides strides to set.
  */
 void mage_set_age_strides(uint32_t stream_id, uint32_t age_id, uint32_t strides);
+
+/**
+ * @brief Sets the per-IV addressing mode for all Address Generation Engines (AGEs).
+ *
+ * Each IV can use its stride Si in linear mode (Si * i, mode bit 0) or tiled mode
+ * ((i >> log2(Si)) * (i % Si), mode bit 1). In tiled mode Si must be a power of two and
+ * the corresponding stride field (see mage_set_age_strides) must hold log2(Si) instead of Si.
+ *
+ * @param modes mode bitmask per AGE: bits [3:0] select the mode for strides S0..S3.
+ */
+void mage_set_all_age_stride_modes(uint32_t modes[MAGE_N_AGES]);
+
+/**
+ * @brief Sets the per-IV addressing mode for an Address Generation Engine (AGE).
+ *
+ * @param stream_id The stream ID.
+ * @param age_id The age ID.
+ * @param modes mode bitmask: bits [3:0] select the mode for strides S0..S3
+ *              (0 = linear Si * i, 1 = tiled (i >> log2(Si)) * (i % Si)).
+ */
+void mage_set_age_stride_mode(uint32_t stream_id, uint32_t age_id, uint32_t modes);
 
 
 /**

@@ -18,10 +18,9 @@ module pe_dae
     input  logic                                 acc_match_i,
 %endif
     input  logic [N_CFG_BITS_PE-1:0]             ctrl_pe_i,
-%if activation_computation == 1:
-    // delay operands
-    input  logic [   N_NEIGH_PE-1:0][  N_BITS:0] neigh_delay_op_i,
-    output logic [         N_BITS:0]             delay_op_o,
+%if has_delay_pe == 1:
+    input  logic [   N_NEIGH_PE-1:0][N_BITS-1:0] neigh_delay_op_i,
+    output logic [       N_BITS-1:0]             delay_op_o,
 %endif
     output logic [       N_BITS-1:0]             pe_res_o
 );
@@ -39,18 +38,18 @@ module pe_dae
   logic      [                1:0] vec_mode;
 %endif
   fu_instr_t                       fu_instr;
-%if activation_computation == 1:
+%if has_delay_pe == 1:
   delay_pe_mux_sel_t                          delay_pe_mux_sel;
   delay_pe_op_mux_sel_t                       delay_pe_op_mux_sel;
   // delay operands signals
-  logic                 [           N_BITS:0] delay_op_fu;
-  logic                 [           N_BITS:0] delay_op_out;
-  logic                 [           N_BITS:0] delay_op_out_d1;
-  logic                 [           N_BITS:0] delay_op_out_d2;
+  logic                 [         N_BITS-1:0] delay_op_fu;
+  logic                 [         N_BITS-1:0] delay_op_out;
+  logic                 [         N_BITS-1:0] delay_op_out_d1;
+  logic                 [         N_BITS-1:0] delay_op_out_d2;
 %endif
 
     // fu signals
-%if activation_computation == 1:
+%if has_delay_pe == 1:
     logic                                       multi_op_instr;
 %endif
 
@@ -84,7 +83,7 @@ module pe_dae
 %if format_part == 1:
   assign vec_mode  = ctrl_pe_i[VEC_MODE_SEL_MSB : VEC_MODE_SEL_LSB];
 %endif
-%if activation_computation == 1:
+%if has_delay_pe == 1:
   assign delay_pe_mux_sel = delay_pe_mux_sel_t'(ctrl_pe_i[DELAY_PE_SEL_MSB : DELAY_PE_SEL_LSB]);
   assign delay_pe_op_mux_sel  = delay_pe_op_mux_sel_t'(ctrl_pe_i[DELAY_PE_OP_SEL_MSB : DELAY_PE_OP_SEL_LSB]);
 %endif
@@ -92,10 +91,22 @@ module pe_dae
   ////////////////////////////////
   //        PE Operands         //
   ////////////////////////////////
+%if has_delay_pe == 1:
+  logic [N_INPUTS_PE-1:0][N_BITS-1:0] pe_op_ext;
+
+  always_comb begin
+    pe_op_ext           = pe_op_i;
+    pe_op_ext[DELAY_OP] = delay_op_fu;
+  end
+
+  assign op_a = pe_op_ext[mux_a_sel];
+  assign op_b = pe_op_ext[mux_b_sel];
+%else:
   assign op_a = pe_op_i[mux_a_sel];
   assign op_b = pe_op_i[mux_b_sel];
+%endif
 
-%if activation_computation == 1:
+%if has_delay_pe == 1:
   ////////////////////////////////
   //  Delay Operand Selection   //
   ////////////////////////////////
@@ -124,12 +135,11 @@ module pe_dae
     ->  delay_op_out = op_b        if delay_pe_op_mux_sel == D_PE_OP_B
     ->  delay_op_out = delay_op_fu else
 
-    -> The MSB of the delayed operand is always taken from the delay-operand sent to FU (This delays the sign of input delay operand)
   */
   always_comb begin
-    delay_op_out = (delay_pe_op_mux_sel == D_PE_RES) ?  {delay_op_fu[N_BITS], fu_out} : (
-                   (delay_pe_op_mux_sel == D_PE_OP_A) ? {delay_op_fu[N_BITS], op_a} : (
-                   (delay_pe_op_mux_sel == D_PE_OP_B) ? {delay_op_fu[N_BITS], op_b} : delay_op_fu
+    delay_op_out = (delay_pe_op_mux_sel == D_PE_RES) ?  fu_out : (
+                   (delay_pe_op_mux_sel == D_PE_OP_A) ? op_a : (
+                   (delay_pe_op_mux_sel == D_PE_OP_B) ? op_b : delay_op_fu
                   ));
   end
 
@@ -143,10 +153,10 @@ module pe_dae
   always_ff @(posedge clk_cg, negedge rst_n_i) begin
     if (!rst_n_i) begin
       delay_op_out_d1 <= '0;
-      delay_op_out_d2 <= '0;
+      //delay_op_out_d2 <= '0;
     end else begin
       delay_op_out_d1 <= delay_op_out;
-      delay_op_out_d2 <= delay_op_out_d1;
+      //delay_op_out_d2 <= delay_op_out_d1;
     end
   end
 
@@ -168,7 +178,7 @@ module pe_dae
             ->the "_d1" signals are selected
   */
   always_comb begin
-    if (delay_pe_op_mux_sel == D_PE_RES) begin
+    /* if (delay_pe_op_mux_sel == D_PE_RES) begin
       if (multi_op_instr) begin
         delay_op_o = {delay_op_out_d2[N_BITS], delay_op_out_d1[N_BITS-1:0]};
       end else begin
@@ -177,10 +187,10 @@ module pe_dae
     end else begin
       if (multi_op_instr) begin
         delay_op_o = delay_op_out_d2;
-      end else begin
+      end else begin */
         delay_op_o = delay_op_out_d1;
-      end
-    end
+      /* end
+    end */
   end
 %endif
 
@@ -215,7 +225,7 @@ module pe_dae
         .a_i(op_a),
         .b_i(op_b),
         .delay_sign_i(delay_op_fu[N_BITS]),
-        .const_i(neigh_pe_op_i[CONSTANT]),
+        .const_i(pe_op_i[CONSTANT]),
         .pe_res_i(pe_res_o),
         .acc_match_i(acc_match_i),
         .instr_i(fu_instr),

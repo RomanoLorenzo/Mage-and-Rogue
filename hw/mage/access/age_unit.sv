@@ -18,6 +18,8 @@ module age_unit
     input pea_pkg::state_t state_i,
     //CSR containing all column sizes neeeded for calculating flat address
     input logic [N_AGE_TOT-1:0][N_IVS-1:0][NBIT_LP_IV-1:0] age_strides_i,
+    //CSR selecting, per IV, linear (Si * i) or tiled ((i >> log2(Si)) * (i % Si)) addressing
+    input logic [N_AGE_TOT-1:0][N_IVS-1:0] age_stride_mode_i,
     //from HWLP_ROU
     //oredered ivs for each stream address/bank generation
     input logic [N_AGE_TOT-1:0][N_IVS-1:0][NBIT_LP_IV-1:0] rou_i,
@@ -67,6 +69,7 @@ module age_unit
           .pea_acc_reset_i(pea_acc_reset_i[i]),
           .iv_const_i(const_iv_i[i]),
           .age_strides_i(age_strides_i[i]),
+          .age_stride_mode_i(age_stride_mode_i[i]),
           .n_banks_i(n_banks_i[i]),
           .start_bank_i(start_banks_i[i]),
           .block_size_i(block_size_i[i]),

@@ -224,6 +224,32 @@ void mage_set_age_strides(uint32_t stream_id, uint32_t age_id, uint32_t strides)
 }
 
 /**
+ * @brief Sets the per-IV addressing mode for all Address Generation Engines (AGEs).
+ *
+ * @param modes mode bitmask per AGE: bits [3:0] select the mode for strides S0..S3.
+ */
+void mage_set_all_age_stride_modes(uint32_t modes[MAGE_N_AGES]){
+  uint32_t* start_addr_stride_mode = (int*)(MAGE_STRIDE_MODE_START_ADDR);
+  for(int i = 0; i < MAGE_N_AGES; i++){
+      *start_addr_stride_mode = modes[i];
+      start_addr_stride_mode += 1;
+  }
+}
+
+/**
+ * @brief Sets the per-IV addressing mode for an Address Generation Engine (AGE).
+ *
+ * @param stream_id The stream ID.
+ * @param age_id The age ID.
+ * @param modes mode bitmask: bits [3:0] select the mode for strides S0..S3.
+ */
+void mage_set_age_stride_mode(uint32_t stream_id, uint32_t age_id, uint32_t modes){
+  uint32_t* start_addr_stride_mode = (int*)(MAGE_STRIDE_MODE_START_ADDR);
+  start_addr_stride_mode += stream_id * MAGE_N_AGE_PER_STREAM + age_id;
+  *start_addr_stride_mode = modes;
+}
+
+/**
  * @brief Sets the Prolog-Kernel-Epilog (PKE) value.
  * 
  * @param p The Prolog value.

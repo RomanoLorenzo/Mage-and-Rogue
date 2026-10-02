@@ -4,7 +4,7 @@ PYTHON = python3
 FUSESOC = fusesoc
 
 MAGE_CORE = vlsi:polito:mage-dae
-MAGE_CFG_HJSON ?= config/dae/cfg_2x2_2x2_full.hjson
+MAGE_CFG_HJSON ?= config/dae/cfg_2x4_2x2_full.hjson
 
 ### Regtool ###
 REGTOOL_SCRIPT = util/regtool.py
@@ -21,35 +21,47 @@ re-vendor:
 	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_axi_obi.vendor.hjson -v --update; \
 	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_obi.vendor.hjson -v --update;
 
-re-vendor-quick:
-	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_register_interface.vendor.hjson -v --update; \
-	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_common_cells.vendor.hjson -v --update; \
-	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_tech_cells_generic.vendor.hjson -v --update; \
-	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_axi.vendor.hjson -v --update; \
-	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_axi_obi.vendor.hjson -v --update; \
-	$(PYTHON) ./util/vendor.py ./vendor/pulp_platform_obi.vendor.hjson -v --update;
-
 mage-gen:
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute --tpl-sv hw/mage/execute/pea.sv.tpl 
+	rm -f \
+		hw/mage/execute/pea.sv \
+		hw/mage/execute/pe/dae/pe_dae.sv \
+		hw/mage/execute/pe/dae/pe_dae_part_gemm_acc.sv \
+		hw/mage/packages/agu_pkg.sv \
+		hw/mage/packages/xbar_pkg.sv \
+		hw/mage/access/age.sv \
+		hw/mage/packages/pea_pkg.sv \
+		hw/mage/configuration/peripheral_regs.sv \
+		hw/mage/dmem_decoder.sv \
+		hw/mage_top.sv \
+		hw/mage_wrapper.sv \
+		hw/mage/configuration/mage_regs.hjson \
+		hw/mage/access/agu.sv \
+		hw/mage/access/cfg_dispatcher.sv \
+		hw/mage/access/k_controller.sv \
+		hw/fpga/scripts/generate_sram.tcl \
+		sw/mage.h \
+		sw/mage_params.h \
+		sw/mage.c \
+		sw/mage_x_heep.h
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute --tpl-sv hw/mage/execute/pea.sv.tpl
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute/pe/dae --tpl-sv hw/mage/execute/pe/dae/pe_dae.sv.tpl
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute/pe/dae --tpl-sv hw/mage/execute/pe/dae/pe_dae_part_gemm_acc.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/packages --tpl-sv hw/mage/packages/agu_pkg.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/packages --tpl-sv hw/mage/packages/xbar_pkg.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/access --tpl-sv hw/mage/access/age.sv.tpl  
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/packages --tpl-sv hw/mage/packages/pea_pkg.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/configuration --tpl-sv hw/mage/configuration/peripheral_regs.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage --tpl-sv hw/mage/dmem_decoder.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_top.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_wrapper.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/configuration --tpl-sv hw/mage/configuration/mage_regs.hjson.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/access --tpl-sv hw/mage/access/agu.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/access --tpl-sv hw/mage/access/cfg_dispatcher.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/packages --tpl-sv hw/mage/packages/stream_intf_pkg.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/access --tpl-sv hw/mage/access/k_controller.sv.tpl 
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute/pe/dae --tpl-sv hw/mage/execute/pe/dae/pe_dae_part_gemm_acc.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/packages --tpl-sv hw/mage/packages/agu_pkg.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/packages --tpl-sv hw/mage/packages/xbar_pkg.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/access --tpl-sv hw/mage/access/age.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/packages --tpl-sv hw/mage/packages/pea_pkg.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/configuration --tpl-sv hw/mage/configuration/peripheral_regs.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage --tpl-sv hw/mage/dmem_decoder.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_top.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_wrapper.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/configuration --tpl-sv hw/mage/configuration/mage_regs.hjson.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/access --tpl-sv hw/mage/access/agu.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/access --tpl-sv hw/mage/access/cfg_dispatcher.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/access --tpl-sv hw/mage/access/k_controller.sv.tpl
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/fpga/scripts/ --tpl-sv hw/fpga/scripts/generate_sram.tcl.tpl
-	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.h.tpl 
-	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_params.h.tpl 
-	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.c.tpl 
+	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.h.tpl
+	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_params.h.tpl
+	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.c.tpl
 	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_x_heep.h.tpl
 	util/format-verible;
 	$(PYTHON) $(REGTOOL_SCRIPT) -r -t $(REGTOOL_DEST_DIR) $(REGTOOL_SRC_FILE)
@@ -57,18 +69,37 @@ mage-gen:
 	util/format-verible;
 
 rogue-gen:
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/stream --tpl-sv hw/mage/stream/streaming_interface.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/packages --tpl-sv hw/mage/packages/stream_intf_pkg.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute --tpl-sv hw/mage/execute/pea.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/packages --tpl-sv hw/mage/packages/pea_pkg.sv.tpl 
+	rm -f \
+		hw/mage/stream/streaming_interface.sv \
+		hw/mage/packages/stream_intf_pkg.sv \
+		hw/mage/execute/pea.sv \
+		hw/mage/packages/pea_pkg.sv \
+		hw/mage/execute/pe/streaming/pe_s_*.sv \
+		hw/mage/execute/pe/streaming/fu/fu_s_*.sv \
+		hw/mage/configuration/peripheral_regs.sv \
+		hw/mage_top.sv \
+		hw/mage_wrapper.sv \
+		hw/mage/configuration/mage_regs.hjson \
+		mage-stream.core \
+		sw/mage.h \
+		sw/mage_params.h \
+		sw/mage.c \
+		sw/mage_x_heep.h
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/stream --tpl-sv hw/mage/stream/streaming_interface.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/packages --tpl-sv hw/mage/packages/stream_intf_pkg.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute --tpl-sv hw/mage/execute/pea.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/packages --tpl-sv hw/mage/packages/pea_pkg.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute/pe/streaming --pe-sv hw/mage/execute/pe/streaming/pe_s.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute/pe/streaming/fu --fu-sv hw/mage/execute/pe/streaming/fu/fu_s.sv.tpl
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/configuration --tpl-sv hw/mage/configuration/peripheral_regs.sv.tpl
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_top.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_wrapper.sv.tpl 
-	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/configuration --tpl-sv hw/mage/configuration/mage_regs.hjson.tpl 
-	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.h.tpl 
-	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_params.h.tpl 
-	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.c.tpl 
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_top.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw --tpl-sv hw/mage_wrapper.sv.tpl
+	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/configuration --tpl-sv hw/mage/configuration/mage_regs.hjson.tpl
+	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.h.tpl
+	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_params.h.tpl
+	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.c.tpl
 	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_x_heep.h.tpl
+	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir . --tpl-sv mage-stream.core.tpl
 	util/format-verible;
 	$(PYTHON) $(REGTOOL_SCRIPT) -r -t $(REGTOOL_DEST_DIR) $(REGTOOL_SRC_FILE)
 	$(PYTHON) $(REGTOOL_SCRIPT) -D $(REGTOOL_SRC_FILE) > $(REGTOOL_SW_DEST_DIR)/mage_regs.h
@@ -90,6 +121,29 @@ rogue-gen-sw:
 
 verible:
 	util/format-verible;
+
+### Spells (kernel configurations, see sw/spells/) ###
+# APP names the kernel; its spell lives in sw/spells/<dae|streaming>/$(APP),
+# the arch being taken from the directory of MAGE_CFG_HJSON.
+SPELL_ARCH = $(notdir $(patsubst %/,%,$(dir $(MAGE_CFG_HJSON))))
+SPELL_DIR ?= sw/spells/$(SPELL_ARCH)/$(APP)
+
+# Regenerates MageSpellBuilder.py for MAGE_CFG_HJSON; creates the spell.py
+# scaffold only if the kernel doesn't have one yet (it is hand-written).
+spell-gen:
+	@test -n "$(APP)" || (echo "Usage: make spell-gen APP=<kernel> MAGE_CFG_HJSON=config/<dae|streaming>/<cfg>.hjson" && exit 1)
+	mkdir -p $(SPELL_DIR)
+	$(PYTHON) util/spell-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir $(SPELL_DIR) --tpl-sv sw/spells/MageSpellBuilder.py.tpl
+	@if [ -e $(SPELL_DIR)/spell.py ]; then \
+		echo "$(SPELL_DIR)/spell.py already exists, not overwriting it"; \
+	else \
+		$(PYTHON) util/spell-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir $(SPELL_DIR) --tpl-sv sw/spells/spell.py.tpl; \
+	fi
+
+# Runs spell.py, producing spell.c next to it.
+spell-run:
+	@test -n "$(APP)" || (echo "Usage: make spell-run APP=<kernel> MAGE_CFG_HJSON=config/<dae|streaming>/<cfg>.hjson" && exit 1)
+	$(PYTHON) $(SPELL_DIR)/spell.py
 
 verilator-sim:
 	$(FUSESOC) --cores-root . run --no-export --target=sim --tool=verilator $(FUSESOC_FLAGS) --setup --build $(MAGE_CORE)  2>&1 | tee buildsim.log

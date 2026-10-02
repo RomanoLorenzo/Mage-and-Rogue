@@ -6,7 +6,9 @@
 // Author: Alessio Naclerio
 // Date: 26/02/2025
 // Description: This module describes the Address Generation Engine (AGE) that generates the address, bank
-//              and load_not_store signals
+//              and load_not_store signals. Each IV can be combined with its stride in linear mode
+//              (Si * i) or tiled mode ((i >> log2(Si)) * (i % Si), Si a power of two, stride field
+//              holding log2(Si) in this mode), selected per-IV by age_stride_mode_i.
 
 module age
   import agu_pkg::*;
@@ -32,6 +34,8 @@ module age
     input logic active_i,
     // Strides for IVs
     input logic [N_IVS-1:0][NBIT_LP_IV-1:0] age_strides_i,
+    // Per-IV addressing mode: 0 = linear (Si * i), 1 = tiled ((i >> log2(Si)) * (i % Si))
+    input logic [N_IVS-1:0] age_stride_mode_i,
     // Number of banks in which operand is divided into
     input logic [NBIT_N_BANKS-1:0] n_banks_i,
     // Bank from which data starts to be stored
@@ -77,6 +81,7 @@ module age
 
   // Stage 0 cfg from instruction word
   logic [N_IVS-1:0][NBIT_LP_IV-1:0] age_strides_0;
+  logic [N_IVS-1:0] age_stride_mode_0;
 
   // Stage 1 cfg from instruction word
   logic [1:0][NBIT_LP_IV-1:0] iv_const_1;
@@ -94,6 +99,7 @@ module age
 
   // Stage 0 cfg from instruction word
   logic [N_IVS-1:0][NBIT_LP_IV-1:0] age_strides_0;
+  logic [N_IVS-1:0] age_stride_mode_0;
 
   // Stage 1 cfg from instruction word
   logic [NBIT_LP_IV-1:0] iv_const_1;
@@ -172,6 +178,7 @@ module age
     if (!rst_n_i) begin
       // 1st stage
       age_strides_0 <= '0;
+      age_stride_mode_0 <= '0;
 
       // 2nd stage
       iv_const_1 <= '0;
@@ -211,6 +218,7 @@ module age
 
         // 1-reg stage
         age_strides_0 <= age_strides_i;
+        age_stride_mode_0 <= age_stride_mode_i;
       end
     end
   end
@@ -224,8 +232,9 @@ module age
     block_size_2 = block_size_i;
     stream_lns_2 = lns_i;
     is_acc_store_2 = is_acc_store_i;
-    iv_const_1 = iv_const_i; 
+    iv_const_1 = iv_const_i;
     age_strides_0 = age_strides_i;
+    age_stride_mode_0 = age_stride_mode_i;
   end
 %endif
 
@@ -356,10 +365,25 @@ module age
   //  Operations of AGE Stages  //
   ////////////////////////////////
   
-  // Stage 0: multiplication of IVs by their strides
+  // Stage 0: combination of IVs with their strides
+  // - linear mode   (age_stride_mode_0[i] == 1'b0): mult = i * Si
+  // - tiled mode     (age_stride_mode_0[i] == 1'b1): mult = (i >> log2(Si)) * (i % Si)
+  //   In tiled mode age_strides_0[i] holds log2(Si) (Si constrained to a power of two) instead of Si itself.
+  logic [N_IVS-1:0][NBIT_STRIDE_SHAMT-1:0] stride_shamt;
+  logic [N_IVS-1:0][NBIT_LP_IV-1:0]        iv_div_stride;
+  logic [N_IVS-1:0][NBIT_LP_IV-1:0]        iv_mod_stride;
+
   always_comb begin
     for (int i = 0; i < N_IVS; i = i + 1) begin
-      mult_ivs_in_reg[i] = iv_0[i] * age_strides_0[i];
+      stride_shamt[i]  = age_strides_0[i][NBIT_STRIDE_SHAMT-1:0];
+      iv_div_stride[i] = iv_0[i] >> stride_shamt[i];
+      iv_mod_stride[i] = iv_0[i] & ((NBIT_LP_IV'(1) << stride_shamt[i]) - 1'b1);
+
+      if (age_stride_mode_0[i]) begin
+        mult_ivs_in_reg[i] = iv_div_stride[i] * iv_mod_stride[i];
+      end else begin
+        mult_ivs_in_reg[i] = iv_0[i] * age_strides_0[i];
+      end
     end
   end
 
