@@ -1,4 +1,5 @@
 CAPI=2:
+## NOTE: Auto-generated from mage-stream.core.tpl via mage-gen.py. Do not edit manually.
 
 name: "vlsi:polito:mage-stream"
 description: "Mage - decoupled access-execute cgra"
@@ -6,7 +7,7 @@ description: "Mage - decoupled access-execute cgra"
 filesets:
 
   files_packages:
-    files:  
+    files:
     - hw/mage/packages/stream_intf_pkg.sv
     - hw/mage/packages/pea_pkg.sv
     file_type: systemVerilogSource
@@ -27,22 +28,20 @@ filesets:
     - hw/mage/execute/pe/div/div_wrapper.sv
     - hw/mage/execute/pe/div/r_div_pipe.sv
     - hw/mage/execute/pe/div/div_wrapper_pipe.sv
-    - hw/mage/execute/pe/streaming/fu/fu_s_full_gemm.sv
-    - hw/mage/execute/pe/streaming/fu/fu_s_full_act_serdiv.sv
-    - hw/mage/execute/pe/streaming/fu/fu_s_full_act_pipediv.sv
-    - hw/mage/execute/pe/streaming/fu/fu_s_part_gemm.sv
-    - hw/mage/execute/pe/streaming/fu/fu_s_part_gemm_acc.sv
-    - hw/mage/execute/pe/streaming/pe_s_full_gemm.sv
-    - hw/mage/execute/pe/streaming/pe_s_full_act_serdiv.sv
-    - hw/mage/execute/pe/streaming/pe_s_full_act_pipediv.sv
-    - hw/mage/execute/pe/streaming/pe_s_part_gemm.sv
-    - hw/mage/execute/pe/streaming/pe_s_part_gemm_acc.sv
+    - hw/mage/execute/pe/part_mul.sv
+    - hw/mage/execute/pe/part_add_sub.sv
+% for name in fu_variants:
+    - hw/mage/execute/pe/streaming/fu/${name}.sv
+% endfor
+% for name in pe_variants:
+    - hw/mage/execute/pe/streaming/${name}.sv
+% endfor
     - hw/mage/execute/pea.sv
     - hw/mage_top.sv
     file_type: systemVerilogSource
 
   files_stream:
-    files:   
+    files:
     - hw/mage/stream/dma_pea_xbar.sv
     - hw/mage/stream/pea_dma_xbar.sv
     - hw/mage/stream/streaming_interface.sv
@@ -56,7 +55,7 @@ filesets:
   files_verilator_waiver:
     files:
     - tb/tb.vlt
-    file_type: vlt 
+    file_type: vlt
 
   files_verilator_tb:
     files:
