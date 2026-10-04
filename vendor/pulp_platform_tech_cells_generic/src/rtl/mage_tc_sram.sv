@@ -59,9 +59,9 @@ module mage_tc_sram #(
   parameter int unsigned ByteWidth    = 32'd8,    // Width of a data byte
   parameter int unsigned NumPorts     = 32'd2,    // Number of read and write ports
   parameter int unsigned Latency      = 32'd1,    // Latency when the read data is available
-  parameter              SimInit      = "none",   // Simulation initialization
+  parameter string       SimInit      = "none",   // Simulation initialization
   parameter bit          PrintSimCfg  = 1'b0,     // Print configuration
-  parameter              ImplKey      = "none",   // Reference to specific implementation
+  parameter string       ImplKey      = "none",   // Reference to specific implementation
   // DEPENDENT PARAMETERS, DO NOT OVERWRITE!
   parameter int unsigned AddrWidth = (NumWords > 32'd1) ? $clog2(NumWords) : 32'd1,
   parameter int unsigned BeWidth   = (DataWidth + ByteWidth - 32'd1) / ByteWidth, // ceil_div
@@ -86,6 +86,16 @@ module mage_tc_sram #(
   // hold the read address when no read access is made
   addr_t [NumPorts-1:0] r_addr_q;
 
+  function automatic data_t random_data();
+    data_t value;
+
+    for (int unsigned j = 0; j < DataWidth; j++) begin
+      value[j] = bit'($urandom());
+    end
+
+    return value;
+  endfunction
+
   // SRAM simulation initialization
   data_t init_val[NumWords-1:0];
   initial begin : proc_sram_init
@@ -93,7 +103,7 @@ module mage_tc_sram #(
       case (SimInit)
         "zeros":  init_val[i] = {DataWidth{1'b0}};
         "ones":   init_val[i] = {DataWidth{1'b1}};
-        "random": init_val[i] = {DataWidth{$urandom()}};
+        "random": init_val[i] = random_data();
         default:  init_val[i] = {DataWidth{1'bx}};
       endcase
     end

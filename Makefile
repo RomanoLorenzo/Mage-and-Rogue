@@ -183,16 +183,19 @@ clean-synthesis:
 flist:
 	rm -f Flist.mage && \
 	rm -f Bender.lock && \
-	bender --local script verilator > Flist.mage
+	bender --local script verilator > Flist.mage && \
+	rm -f Bender.lock
 
 check-verilator: flist
 	verilator --lint-only -Wno-fatal --error-limit 0 waivers.vlt -f Flist.mage --top-module mage_axi_wrapper 2>&1 | tee verilator_lint.log
-	@if grep -qi "%Err" verilator_lint.log; then \
-		grep -i "%Err" verilator_lint.log; \
+	@if grep -qi "%Error" verilator_lint.log; then \
+		grep -niT --color=always "%Error" verilator_lint.log; \
+		echo "\n[FATAL] Erros found:" \
 		exit 1; \
 	else \
-		echo "\n[SUCCESS] No errors detected by Verilator"; \
+		echo "\n[SUCCESS] No errors detected by Verilator. You can suppress warnings using waivers.vlt"; \
 	fi
 
 clean-repo: clean-build clean-synthesis
 	rm -rf .bender
+	git clean -fdX -- ':!doc/doc.pdf' ':!vendor/*.hjson'

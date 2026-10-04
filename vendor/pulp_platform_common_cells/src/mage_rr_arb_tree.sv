@@ -295,7 +295,7 @@ module mage_rr_arb_tree #(
     end
 
     `ifndef COMMON_CELLS_ASSERTS_OFF
-    `ASSERT_INIT(numin_0, NumIn, "Input must be at least one element wide.")
+    `ASSERT_INIT(numin_0, |(NumIn), "Input must be at least one element wide.")
     `ASSERT_INIT(lockin_and_extprio, !(LockIn && ExtPrio),
                  "Cannot use LockIn feature together with external ExtPrio.")
 

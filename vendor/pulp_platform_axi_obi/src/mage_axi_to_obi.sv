@@ -31,11 +31,11 @@ module axi_to_obi #(
   parameter type               axi_rsp_t = logic,
   // Dependent Parameters, *DO NOT OVERWRITE*
   parameter int unsigned       NumBanks = AxiDataWidth/ObiCfg.DataWidth,
-  parameter int unsigned       AUserWidthAdjusted = ObiCfg.OptionalCfg.AUserWidth ?
+  parameter int unsigned       AUserWidthAdjusted = |(ObiCfg.OptionalCfg.AUserWidth) ?
                                                     ObiCfg.OptionalCfg.AUserWidth : 1,
-  parameter int unsigned       WUserWidthAdjusted = ObiCfg.OptionalCfg.WUserWidth ?
+  parameter int unsigned       WUserWidthAdjusted = |(ObiCfg.OptionalCfg.WUserWidth) ?
                                                     ObiCfg.OptionalCfg.WUserWidth : 1,
-  parameter int unsigned       RUserWidthAdjusted = ObiCfg.OptionalCfg.RUserWidth ?
+  parameter int unsigned       RUserWidthAdjusted = |(ObiCfg.OptionalCfg.RUserWidth) ?
                                                     ObiCfg.OptionalCfg.RUserWidth : 1
 ) (
   input  logic     clk_i,
@@ -299,7 +299,7 @@ module axi_to_obi #(
     assign bank_mem_rdata[i]   = obi_rsps[i].r.rdata;
     assign bank_mem_err[i]     = obi_rsps[i].r.err;
     assign bank_mem_ruser[i][ObiCfg.IdWidth-1:0] = obi_rsps[i].r.rid;
-    if (ObiCfg.OptionalCfg.RUserWidth) begin : gen_ruser
+    if (|(ObiCfg.OptionalCfg.RUserWidth)) begin : gen_ruser
       assign bank_mem_ruser[i][IdRuserWidth-1:ObiCfg.IdWidth] = obi_rsps[i].r.r_optional.ruser;
     end
     if (ObiCfg.OptionalCfg.UseProt) begin : gen_obi_bank_assign_prot
@@ -313,14 +313,14 @@ module axi_to_obi #(
     end
     assign obi_reqs[i].a.aid = bank_mem_id[i];
     if (i < NumBanks) begin : gen_bank_auser
-      if (ObiCfg.OptionalCfg.AUserWidth) begin : gen_auser
+      if (|(ObiCfg.OptionalCfg.AUserWidth)) begin : gen_auser
         assign obi_reqs[i].a.a_optional.auser = req_read_auser_i;
       end
     end else begin : gen_bank_awuser
-      if (ObiCfg.OptionalCfg.AUserWidth) begin : gen_auser
+      if (|(ObiCfg.OptionalCfg.AUserWidth)) begin : gen_auser
         assign obi_reqs[i].a.a_optional.auser = req_write_auser_i;
       end
-      if (ObiCfg.OptionalCfg.WUserWidth) begin : gen_wuser
+      if (|(ObiCfg.OptionalCfg.WUserWidth)) begin : gen_wuser
         assign obi_reqs[i].a.a_optional.wuser = req_write_wuser_i;
       end
     end
