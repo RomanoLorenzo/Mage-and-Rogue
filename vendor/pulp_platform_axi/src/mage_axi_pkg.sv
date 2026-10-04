@@ -200,7 +200,7 @@ package mage_axi_pkg;
   beat_lower_byte(largest_addr_t addr, size_t size, len_t len, burst_t burst,
       shortint unsigned strobe_width, shortint unsigned i_beat);
     largest_addr_t _addr = beat_addr(addr, size, len, burst, i_beat);
-    return shortint'(($bits(_addr)  + $bits(strobe_width))'(_addr) - (_addr / largest_addr_t'(strobe_width)) * strobe_width);
+    return shortint'(_addr - (_addr / largest_addr_t'(strobe_width)) * largest_addr_t'(strobe_width));
   endfunction
 
   /// Index of highest byte in beat (see A3-51).

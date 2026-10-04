@@ -187,6 +187,16 @@ module axi_to_detailed_mem_user #(
                     axi_resp_o.b_valid | axi_resp_o.r_valid |
                     (r_cnt_q > 0) | (w_cnt_q > 0);
 
+  mem_user_t ar_user;
+  mem_user_t aw_user;
+  if (PropagateWUser) begin : gen_user_prop
+    assign ar_user = {{UserWidth{1'b0}}, axi_req_i.ar.user};
+    assign aw_user = {axi_req_i.w.user, axi_req_i.aw.user};
+  end else begin : gen_no_user_prop
+    assign ar_user = axi_req_i.ar.user;
+    assign aw_user = axi_req_i.aw.user;
+  end
+
   // Handle reads.
   always_comb begin
     // Default assignments
@@ -199,7 +209,7 @@ module axi_to_detailed_mem_user #(
     if (r_cnt_q > '0) begin
       rd_meta_d.last = (r_cnt_q == 8'd1);
       rd_meta        = rd_meta_d;
-      rd_meta.addr   = rd_meta_q.addr + mage_axi_pkg::num_bytes(rd_meta_q.size);
+      rd_meta.addr   = rd_meta_q.addr + addr_t'(mage_axi_pkg::num_bytes(rd_meta_q.size));
       rd_valid       = 1'b1;
       if (rd_ready) begin
         r_cnt_d--;
@@ -208,7 +218,7 @@ module axi_to_detailed_mem_user #(
     // Handle new AR if there is one.
     end else if (axi_req_i.ar_valid) begin
       rd_meta_d = '{
-        addr:   addr_t'(mage_axi_pkg::aligned_addr(axi_req_i.ar.addr, axi_req_i.ar.size)),
+        addr:   addr_t'(mage_axi_pkg::aligned_addr(mage_axi_pkg::largest_addr_t'(axi_req_i.ar.addr), axi_req_i.ar.size)),
         atop:   '0,
         lock:   axi_req_i.ar.lock,
         strb:   '0,
@@ -217,7 +227,7 @@ module axi_to_detailed_mem_user #(
         qos:    axi_req_i.ar.qos,
         size:   axi_req_i.ar.size,
         write:  1'b0,
-        user:   (PropagateWUser ? {{UserWidth{1'b0}}, axi_req_i.ar.user} : axi_req_i.ar.user),
+        user:   ar_user,
         cache:  axi_req_i.ar.cache,
         prot:   axi_req_i.ar.prot,
         region: axi_req_i.ar.region
@@ -245,12 +255,12 @@ module axi_to_detailed_mem_user #(
     if (w_cnt_q > '0) begin
       wr_meta_d.last = (w_cnt_q == 8'd1);
       wr_meta        = wr_meta_d;
-      wr_meta.addr   = wr_meta_q.addr + mage_axi_pkg::num_bytes(wr_meta_q.size);
+      wr_meta.addr   = wr_meta_q.addr + addr_t'(mage_axi_pkg::num_bytes(wr_meta_q.size));
       if (axi_req_i.w_valid) begin
         wr_valid = 1'b1;
         wr_meta.strb = axi_req_i.w.strb;
         if (PropagateWUser) begin
-          wr_meta.user = {axi_req_i.w.user, wr_meta.user[UserWidth-1:0]};
+          wr_meta.user = {axi_req_i.w.user, wr_meta.user[UserWidth-1:0]}[$bits(mem_user_t)-1:0];
         end
         if (wr_ready) begin
           axi_resp_o.w_ready = 1'b1;
@@ -261,7 +271,7 @@ module axi_to_detailed_mem_user #(
     // Handle new AW if there is one.
     end else if (axi_req_i.aw_valid && axi_req_i.w_valid) begin
       wr_meta_d = '{
-        addr:   addr_t'(mage_axi_pkg::aligned_addr(axi_req_i.aw.addr, axi_req_i.aw.size)),
+        addr:   addr_t'(mage_axi_pkg::aligned_addr(mage_axi_pkg::largest_addr_t'(axi_req_i.aw.addr), axi_req_i.aw.size)),
         atop:   axi_req_i.aw.atop,
         lock:   axi_req_i.aw.lock,
         strb:   axi_req_i.w.strb,
@@ -270,7 +280,7 @@ module axi_to_detailed_mem_user #(
         qos:    axi_req_i.aw.qos,
         size:   axi_req_i.aw.size,
         write:  1'b1,
-        user:   PropagateWUser ? {axi_req_i.w.user, axi_req_i.aw.user} : axi_req_i.aw.user,
+        user:   aw_user,
         cache:  axi_req_i.aw.cache,
         prot:   axi_req_i.aw.prot,
         region: axi_req_i.aw.region

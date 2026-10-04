@@ -76,7 +76,7 @@ module stream_to_mem #(
 
     // Can issue another request if the counter is not at its limit or a response is delivered in
     // the current cycle.
-    assign req_ready = (cnt_q < BufDepth) | (resp_valid_o & resp_ready_i);
+    assign req_ready = (cnt_q < cnt_t'(BufDepth)) | (resp_valid_o & resp_ready_i);
 
     // Control request and memory request interface handshakes.
     assign req_ready_o = mem_req_ready_i & req_ready;
@@ -124,7 +124,7 @@ module stream_to_mem #(
             "Memory response lost!")
     `ASSERT(counter_underflowed, cnt_q == '0 |=> cnt_q != '1, clk_i, !rst_ni,
             "Counter underflowed!")
-    `ASSERT(counter_overflowed, cnt_q == BufDepth |=> cnt_q != BufDepth + 1, clk_i, !rst_ni,
+    `ASSERT(counter_overflowed, cnt_q == cnt_t'(BufDepth) |=> cnt_q != cnt_t'(BufDepth + 1), clk_i, !rst_ni,
             "Counter overflowed!")
   end else begin : gen_no_buf_asserts
     `ASSUME(no_memory_response, mem_req_valid_o & mem_req_ready_i |-> mem_resp_valid_i,

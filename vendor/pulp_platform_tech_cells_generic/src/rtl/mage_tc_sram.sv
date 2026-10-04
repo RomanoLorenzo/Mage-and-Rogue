@@ -120,6 +120,13 @@ module mage_tc_sram #(
     for (genvar i = 0; i < NumPorts; i++) begin : gen_port
       assign rdata_o[i] = (req_i[i] && !we_i[i]) ? sram[addr_i[i]] : sram[r_addr_q[i]];
     end
+  end else if (Latency == 32'd1) begin : gen_read_lat_one
+    always_comb begin
+      for (int unsigned i = 0; i < NumPorts; i++) begin
+        rdata_o[i] = rdata_q[i][0];
+        rdata_d[i][0] = (req_i[i] && !we_i[i]) ? sram[addr_i[i]] : sram[r_addr_q[i]];
+      end
+    end
   end else begin : gen_read_lat
 
     always_comb begin

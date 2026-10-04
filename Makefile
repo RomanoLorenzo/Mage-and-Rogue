@@ -4,7 +4,7 @@ PYTHON = python3
 FUSESOC = fusesoc
 
 MAGE_CORE = vlsi:polito:mage-dae
-MAGE_CFG_HJSON ?= config/dae/cfg_2x4_2x2_full.hjson
+MAGE_CFG_HJSON ?= config/dae/cfg_2x2_2x2_full.hjson
 
 ### Regtool ###
 REGTOOL_SCRIPT = util/regtool.py
@@ -175,7 +175,7 @@ waves:
 	gtkwave ./build/vlsi_polito_mage/sim-verilator/waveform.vcd
 
 clean-build:
-	rm -rf build buildsim.log builddesigncompiler.log
+	rm -rf build buildsim.log builddesigncompiler.log verilator_build.log
 
 clean-synthesis:
 	rm -rf build/vlsi_polito_mage/syn-design_compiler buildsim.log builddesigncompiler.log
@@ -186,7 +186,7 @@ flist:
 	bender --local script verilator > Flist.mage && \
 	rm -f Bender.lock
 
-check-verilator: flist
+vericheck-lite: flist
 	verilator --lint-only -Wno-fatal --error-limit 0 waivers.vlt -f Flist.mage --top-module mage_axi_wrapper 2>&1 | tee verilator_lint.log
 	@if grep -qi "%Error" verilator_lint.log; then \
 		grep -niT --color=always "%Error" verilator_lint.log; \
@@ -195,6 +195,20 @@ check-verilator: flist
 	else \
 		echo "\n[SUCCESS] No errors detected by Verilator. You can suppress warnings using waivers.vlt"; \
 	fi
+
+VERILATOR_BUILD_DIR = build/verilator_check
+TB_MAGE_AXI = $(abspath tb/tb_mage_axi_wrapper.cpp)
+
+vericheck: flist
+	@mkdir -p $(VERILATOR_BUILD_DIR)
+	verilator --cc --exe --build -j $$(nproc) \
+		--Mdir $(VERILATOR_BUILD_DIR) \
+		-Wno-fatal -Wno-UNOPTFLAT --error-limit 0 \
+		waivers.vlt -f Flist.mage --top-module mage_axi_wrapper \
+		$(TB_MAGE_AXI) 2>&1 | tee verilator_build.log
+	@echo "\n[INFO] Running compiled Verilator simulation executable..."
+	./$(VERILATOR_BUILD_DIR)/Vmage_axi_wrapper
+	@echo "\n[SUCCESS] Verilator full C++ compilation and simulation check PASSED!"
 
 clean-repo: clean-build clean-synthesis
 	rm -rf .bender

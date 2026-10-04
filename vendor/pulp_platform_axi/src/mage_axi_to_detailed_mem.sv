@@ -179,7 +179,7 @@ module axi_to_detailed_mem #(
     if (r_cnt_q > '0) begin
       rd_meta_d.last = (r_cnt_q == 8'd1);
       rd_meta        = rd_meta_d;
-      rd_meta.addr   = rd_meta_q.addr + mage_axi_pkg::num_bytes(rd_meta_q.size);
+      rd_meta.addr   = rd_meta_q.addr + addr_t'(mage_axi_pkg::num_bytes(rd_meta_q.size));
       rd_valid       = 1'b1;
       if (rd_ready) begin
         r_cnt_d--;
@@ -225,7 +225,7 @@ module axi_to_detailed_mem #(
     if (w_cnt_q > '0) begin
       wr_meta_d.last = (w_cnt_q == 8'd1);
       wr_meta        = wr_meta_d;
-      wr_meta.addr   = wr_meta_q.addr + mage_axi_pkg::num_bytes(wr_meta_q.size);
+      wr_meta.addr   = wr_meta_q.addr + addr_t'(mage_axi_pkg::num_bytes(wr_meta_q.size));
       if (axi_req_i.w_valid) begin
         wr_valid = 1'b1;
         wr_meta.strb = axi_req_i.w.strb;
@@ -851,7 +851,7 @@ module mem_stream_to_banks_detailed #(
 
     // Can issue another request if the counter is not at its limit or a response is delivered in
     // the current cycle.
-    assign cnt_req_ready = (cnt_q < MaxTrans) | (rvalid_o & rready_i);
+    assign cnt_req_ready = (cnt_q < cnt_t'(MaxTrans)) | (rvalid_o & rready_i);
 
     // Control request and memory request interface handshakes.
     assign gnt_o = mem_req_ready & cnt_req_ready;
@@ -864,7 +864,7 @@ module mem_stream_to_banks_detailed #(
   // Handle requests.
   assign req_valid = mem_req_valid & mem_req_ready;
   for (genvar i = 0; unsigned'(i) < NumBanks; i++) begin : gen_reqs
-    assign bank_req[i].addr  = align_addr(addr_i) + 7'(i * BytesPerBank);
+    assign bank_req[i].addr  = align_addr(addr_i) + addr_t'(i * BytesPerBank);
     assign bank_req[i].wdata = wdata_i[i*BitsPerBank+:BitsPerBank];
     assign bank_req[i].strb  = strb_i[i*BytesPerBank+:BytesPerBank];
     assign bank_req[i].wuser = wuser_i;
