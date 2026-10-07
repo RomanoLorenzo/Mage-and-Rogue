@@ -2,18 +2,19 @@
 #include <stdint.h>
 
 #include "mage_regs.h"
-#include "mage_x_heep.h"
+#include "mage_cva6.h"
 #include "mage.h"
 
-static inline void write_mage_register(uint32_t p_val, uint32_t p_addr, uint32_t p_mask, uint8_t p_sel){
+void write_mage_register(uint32_t p_val, uintptr_t p_addr, uint32_t p_mask, uint8_t p_sel){
   /*
    * An intermediate variable "value" is used to prevent writing twice into
    * the register.
    */
-  uint32_t value = *((uint32_t *)p_addr);
+  volatile uint32_t *reg = (volatile uint32_t *)p_addr;
+  uint32_t value = *reg;
   value &= ~(p_mask << p_sel);
   value |= (p_val & p_mask) << p_sel;
-  *((uint32_t *)p_addr) = value;
+  *reg = value;
 }
 
 /**
@@ -22,7 +23,6 @@ static inline void write_mage_register(uint32_t p_val, uint32_t p_addr, uint32_t
  * @param mage_pea_cfg The PEA configuration array that contains the configuration for each PE.
  */
 void mage_set_pea_cfg(uint32_t mage_pea_cfg[MAGE_PEA_ROWS][MAGE_PEA_COLS][KMEM_SIZE]){
-  int32_t *mage_pea_cfg_idx = (int32_t *)(MAGE_PEA_CFG_START_ADDR);
   for(uint8_t i = 0; i < MAGE_PEA_ROWS; i++){
     for(uint8_t j = 0; j < MAGE_PEA_COLS; j++){
       for(uint8_t k = 0; k < KMEM_SIZE; k++){
@@ -41,8 +41,9 @@ void mage_set_pea_cfg(uint32_t mage_pea_cfg[MAGE_PEA_ROWS][MAGE_PEA_COLS][KMEM_S
  * @param time The time instant for configuration pe_cfg.
  */
 void mage_set_pe_cfg(uint32_t pe_cfg, uint8_t pe_row, uint8_t pe_col, uint8_t time){
-  int32_t *mage_pe_cfg = ((int32_t *)(MAGE_PEA_CFG_START_ADDR)) + pe_row * MAGE_PEA_COLS + pe_col;
-  write_mage_register(pe_cfg, mage_pe_cfg, 0xFFFFFFFF, 0);
+  (void)time;
+  volatile uint32_t *mage_pe_cfg = ((volatile uint32_t *)(MAGE_PEA_CFG_START_ADDR)) + pe_row * MAGE_PEA_COLS + pe_col;
+  write_mage_register(pe_cfg, (uintptr_t)mage_pe_cfg, 0xFFFFFFFF, 0);
 }
 
 /**
@@ -51,7 +52,6 @@ void mage_set_pe_cfg(uint32_t pe_cfg, uint8_t pe_row, uint8_t pe_col, uint8_t ti
  * @param pea_constants PEA constants array.
  */
 void mage_set_pea_constants(uint32_t pea_constants[MAGE_PEA_ROWS][MAGE_PEA_COLS]){
-  int32_t *mage_pea_constants_idx = (int32_t *)(MAGE_PEA_CONSTANTS_START_ADDR);
   for(int i = 0; i < MAGE_PEA_COLS; i++){
     for(int j = 0; j < MAGE_PEA_ROWS; j++){
       mage_set_pe_constant(pea_constants[j][i], j, i);
@@ -66,9 +66,9 @@ void mage_set_pea_constants(uint32_t pea_constants[MAGE_PEA_ROWS][MAGE_PEA_COLS]
  * @param reg The register index.
  */
 void mage_set_pe_constant(uint32_t pe_constant, uint8_t pe_row, uint8_t pe_col){
-  int32_t *mage_pea_constants = (int32_t *)(MAGE_PEA_CONSTANTS_START_ADDR);
+  volatile uint32_t *mage_pea_constants = (volatile uint32_t *)(MAGE_PEA_CONSTANTS_START_ADDR);
   mage_pea_constants += pe_row * MAGE_PEA_COLS + pe_col;
-  write_mage_register(pe_constant, mage_pea_constants, 0xFFFFFFFF, 0);
+  write_mage_register(pe_constant, (uintptr_t)mage_pea_constants, 0xFFFFFFFF, 0);
 }
 
 %if dae_cgra == 1:
@@ -81,9 +81,10 @@ void mage_set_pe_constant(uint32_t pe_constant, uint8_t pe_row, uint8_t pe_col){
 /**
  * @brief Start the CGRA.
  */
-void mage_start(){
-  int32_t *mage_start = (int32_t *)(MAGE_STATUS_START_ADDR);
-  *mage_start = 1 << MAGE_STATUS_START_BIT;
+void mage_start(void){
+  asm volatile("fence rw, rw" ::: "memory");
+  volatile uint32_t *mage_start = (volatile uint32_t *)(MAGE_STATUS_START_ADDR);
+  *mage_start = 1U << MAGE_STATUS_START_BIT;
 }
 
 /**
@@ -91,10 +92,18 @@ void mage_start(){
  * 
  * @return uint32_t 1 if finished, 0 otherwise.
  */
-uint32_t is_mage_finished()
+uint32_t is_mage_finished(void)
 {
-  int32_t *mage_status = (int32_t *)(MAGE_STATUS_START_ADDR);
+  volatile uint32_t *mage_status = (volatile uint32_t *)(MAGE_STATUS_START_ADDR);
   return (*mage_status >> MAGE_STATUS_DONE_BIT) & 0x1;
+}
+
+/**
+ * @brief Waits until Mage has finished its operation.
+ */
+void mage_wait_done(void){
+  while(!is_mage_finished());
+  asm volatile("fence rw, rw" ::: "memory");
 }
 
 
@@ -104,7 +113,7 @@ uint32_t is_mage_finished()
  * @param ii The II to set.
  */
 void mage_set_ii(uint8_t ii){
-  int32_t *mage_gen_cfg = (int32_t *)(MAGE_GEN_CFG_START_ADDR);
+  volatile uint32_t *mage_gen_cfg = (volatile uint32_t *)(MAGE_GEN_CFG_START_ADDR);
   //ii is the 4 least significant bits
   *mage_gen_cfg = (*mage_gen_cfg & 0xFFFFFFF0) | ii;
 }
@@ -115,7 +124,7 @@ void mage_set_ii(uint8_t ii){
  * @param snt The 4 bits to set the mode for the 4 components.
  */
 void mage_set_snt(uint32_t snt){
-  int32_t *mage_gen_cfg = (int32_t *)(MAGE_GEN_CFG_START_ADDR);
+  volatile uint32_t *mage_gen_cfg = (volatile uint32_t *)(MAGE_GEN_CFG_START_ADDR);
   *mage_gen_cfg = (*mage_gen_cfg & 0xFFFFFF0F) | (snt << 4);
 }
 
@@ -125,7 +134,7 @@ void mage_set_snt(uint32_t snt){
  * @param mode Vector mode for the accumulation (8, 16, 32 bits)
  */
 void mage_set_acc_mode(uint32_t mode){
-  int32_t *mage_gen_cfg = (int32_t *)(MAGE_GEN_CFG_START_ADDR);
+  volatile uint32_t *mage_gen_cfg = (volatile uint32_t *)(MAGE_GEN_CFG_START_ADDR);
   if(mode == 8){
     *mage_gen_cfg = *mage_gen_cfg | 0x0000100;
   }else if(mode == 16){
@@ -139,8 +148,8 @@ void mage_set_acc_mode(uint32_t mode){
  * @param blocksize The blocksize to set.
  */
 void mage_set_address_map_blocksize(uint32_t blocksize){
-  int32_t *mage_gen_cfg = (int32_t *)(MAGE_GEN_CFG_START_ADDR);
-  *mage_gen_cfg = (*mage_gen_cfg & 0x0FFFFFFF) | (blocksize << 12);
+  volatile uint32_t *mage_block_size = (volatile uint32_t *)(MAGE_BLOCK_SIZE_START_ADDR);
+  *mage_block_size = blocksize & 0x3;
 }
 
 
@@ -150,19 +159,21 @@ void mage_set_address_map_blocksize(uint32_t blocksize){
  * @param cfg_bits The configuration bits to set.
  */
 void mage_set_general_cfg_bits(uint32_t cfg_bits){
-  int32_t *mage_gen_cfg = (int32_t *)(MAGE_GEN_CFG_START_ADDR);
+  volatile uint32_t *mage_gen_cfg = (volatile uint32_t *)(MAGE_GEN_CFG_START_ADDR);
   *mage_gen_cfg = cfg_bits;
 }
 
+%if kernel_len != 1:
 /**
  * @brief Sets each PE control mode (static or time-multiplexed).
  * 
  * @param pea_control_snt The PEA control mode. Each bit sets the mode of a PE in row-major order.
  */
 void mage_set_pea_control_snt(uint32_t pea_control_snt){
-  int32_t *mage_pea_control_snt = (int32_t *)(MAGE_PEA_CONTROL_SNT_ADDR);
+  volatile uint32_t *mage_pea_control_snt = (volatile uint32_t *)(MAGE_PEA_CONTROL_SNT_ADDR);
   *mage_pea_control_snt = pea_control_snt;
 }
+%endif
 
 /**
  * @brief Sets the Initial Loop Bounds (ILB) value for the Hardware Loops.
@@ -203,7 +214,7 @@ void mage_set_li(uint8_t li[MAGE_NUM_HWLP]){
  * @param strides strides to set.
  */
 void mage_set_all_age_strides(uint32_t strides[MAGE_N_AGES]){
-  uint32_t* start_addr_strides = (int*)(MAGE_STRIDES_START_ADDR);
+  volatile uint32_t* start_addr_strides = (volatile uint32_t*)(MAGE_STRIDES_START_ADDR);
   for(int i = 0; i < MAGE_N_AGES; i++){
       *start_addr_strides = strides[i];
       start_addr_strides += 1;
@@ -218,7 +229,7 @@ void mage_set_all_age_strides(uint32_t strides[MAGE_N_AGES]){
  * @param strides strides to set.
  */
 void mage_set_age_strides(uint32_t stream_id, uint32_t age_id, uint32_t strides){
-  uint32_t* start_addr_strides = (int*)(MAGE_STRIDES_START_ADDR);
+  volatile uint32_t* start_addr_strides = (volatile uint32_t*)(MAGE_STRIDES_START_ADDR);
   start_addr_strides += stream_id * MAGE_N_AGE_PER_STREAM + age_id;
   *start_addr_strides = strides;
 }
@@ -229,7 +240,7 @@ void mage_set_age_strides(uint32_t stream_id, uint32_t age_id, uint32_t strides)
  * @param modes mode bitmask per AGE: bits [3:0] select the mode for strides S0..S3.
  */
 void mage_set_all_age_stride_modes(uint32_t modes[MAGE_N_AGES]){
-  uint32_t* start_addr_stride_mode = (int*)(MAGE_STRIDE_MODE_START_ADDR);
+  volatile uint32_t* start_addr_stride_mode = (volatile uint32_t*)(MAGE_STRIDE_MODE_START_ADDR);
   for(int i = 0; i < MAGE_N_AGES; i++){
       *start_addr_stride_mode = modes[i];
       start_addr_stride_mode += 1;
@@ -244,11 +255,12 @@ void mage_set_all_age_stride_modes(uint32_t modes[MAGE_N_AGES]){
  * @param modes mode bitmask: bits [3:0] select the mode for strides S0..S3.
  */
 void mage_set_age_stride_mode(uint32_t stream_id, uint32_t age_id, uint32_t modes){
-  uint32_t* start_addr_stride_mode = (int*)(MAGE_STRIDE_MODE_START_ADDR);
+  volatile uint32_t* start_addr_stride_mode = (volatile uint32_t*)(MAGE_STRIDE_MODE_START_ADDR);
   start_addr_stride_mode += stream_id * MAGE_N_AGE_PER_STREAM + age_id;
   *start_addr_stride_mode = modes;
 }
 
+%if kernel_len != 1:
 /**
  * @brief Sets the Prolog-Kernel-Epilog (PKE) value.
  * 
@@ -258,12 +270,13 @@ void mage_set_age_stride_mode(uint32_t stream_id, uint32_t age_id, uint32_t mode
  * @param len_dfg The length of the DFG.
  */
 void mage_set_pke(uint8_t p, uint8_t k, uint8_t e, uint8_t len_dfg){
-  int32_t *mage_pke = (int32_t *)(MAGE_PKE_START_ADDR);
+  volatile uint32_t *mage_pke = (volatile uint32_t *)(MAGE_PKE_START_ADDR);
   *mage_pke = (*mage_pke & 0xFFFFFFF0) | (p << 0);
   *mage_pke = (*mage_pke & 0xFFFFFF0F) | (k << 4);
   *mage_pke = (*mage_pke & 0xFFFFF0FF) | (e << 8);
   *mage_pke = (*mage_pke & 0xFFF00FFF) | (len_dfg << 12);
 }
+%endif
 
 /**
  * @brief Sets the AGE configuration.
@@ -271,7 +284,7 @@ void mage_set_pke(uint8_t p, uint8_t k, uint8_t e, uint8_t len_dfg){
  * @param mage_mage_cfg The AGE configuration array that contains the configuration for each AGE.
  */
 void mage_set_mage_cfg(uint32_t mage_mage_cfg[MAGE_N_STREAMS][MAGE_N_AGE_PER_STREAM][KMEM_SIZE]){
-  int32_t *mage_mage_cfg_idx = (int32_t *)(MAGE_MAGE_CFG_START_ADDR);
+  volatile uint32_t *mage_mage_cfg_idx = (volatile uint32_t *)(MAGE_MAGE_CFG_START_ADDR);
   for(int i = 0; i < MAGE_N_STREAMS; i++){
     for(int j = 0; j < MAGE_N_AGE_PER_STREAM; j++){
       for(int k = 0; k < KMEM_SIZE; k++){
@@ -291,33 +304,9 @@ void mage_set_mage_cfg(uint32_t mage_mage_cfg[MAGE_N_STREAMS][MAGE_N_AGE_PER_STR
  * @param time_kernel The time instant of the kernel in which the configuration is applied.
  */
 void mage_set_age_cfg(uint32_t age_cfg, uint32_t stream_id, uint32_t age_id, uint32_t time_kernel){
-  int32_t *mage_mage_cfg = (int32_t *)(MAGE_MAGE_CFG_START_ADDR);
+  volatile uint32_t *mage_mage_cfg = (volatile uint32_t *)(MAGE_MAGE_CFG_START_ADDR);
   mage_mage_cfg += (stream_id * MAGE_N_AGE_PER_STREAM + age_id) * KMEM_SIZE + time_kernel;
   *mage_mage_cfg = age_cfg;
-}
-
-/**
- * @brief Sets the Induction Variable (IV) constraints for each AGE.
- * 
- * @param iv_constraints The IV constraints values.
- */
-void mage_set_iv_constraints(uint8_t iv_constraints[MAGE_N_AGES]){
-  for(int i = 0; i < MAGE_N_AGES; i++){
-    write_mage_register(iv_constraints[i], MAGE_MAGE_IV_CONSTRAINTS_START_ADDR, 0xFF, 8*i);
-  }
-}
-
-/**
- * @brief Sets the Induction Variable (IV) constraint for a specific AGE.
- * 
- * @param iv_constraints The IV constraint value.
- */
-void mage_set_iv_constraints_reg(uint8_t iv_constraint, int8_t stream_id, int8_t age_id){
-  int32_t *mage_iv_constraints = (int32_t *)(MAGE_MAGE_IV_CONSTRAINTS_START_ADDR);
-  mage_iv_constraints += (stream_id * MAGE_N_AGE_PER_STREAM + age_id) / 4;
-  uint32_t offset = ((stream_id * MAGE_N_AGE_PER_STREAM + age_id) % 4) * 8;
-
-  write_mage_register(iv_constraint, mage_iv_constraints, 0xFF, offset);
 }
 
 /**
@@ -326,7 +315,7 @@ void mage_set_iv_constraints_reg(uint8_t iv_constraint, int8_t stream_id, int8_t
  * @param sel_out_pea The selectors array for PEA.
  */
 void mage_set_sel_out_pea(uint32_t sel_out_pea[SEL_OUT_PEA_SIZE]){
-  int32_t *mage_sel_out_pea_idx = (int32_t *)(MAGE_SEL_OUT_PEA_START_ADDR);
+  volatile uint32_t *mage_sel_out_pea_idx = (volatile uint32_t *)(MAGE_SEL_OUT_PEA_START_ADDR);
   for(int i = 0; i < SEL_OUT_PEA_SIZE; i++){
     *mage_sel_out_pea_idx = sel_out_pea[i];
     mage_sel_out_pea_idx++;
@@ -339,7 +328,7 @@ void mage_set_sel_out_pea(uint32_t sel_out_pea[SEL_OUT_PEA_SIZE]){
  * @param sel_out_pea The selectors array for PEA.
  */
 void mage_set_sel_out_pea_reg(uint32_t sel_out_pea, uint32_t reg){
-  int32_t *mage_sel_out_pea = (int32_t *)(MAGE_SEL_OUT_PEA_START_ADDR);
+  volatile uint32_t *mage_sel_out_pea = (volatile uint32_t *)(MAGE_SEL_OUT_PEA_START_ADDR);
   mage_sel_out_pea += reg;
   *mage_sel_out_pea = sel_out_pea;
 }
@@ -350,7 +339,7 @@ void mage_set_sel_out_pea_reg(uint32_t sel_out_pea, uint32_t reg){
  * @param load_stream The Load Stream.
  */
 void mage_set_load_stream(uint32_t load_stream[LOAD_STREAM_SIZE]){
-  int32_t *mage_load_stream_idx = (int32_t *)(MAGE_LOAD_AGE_SEL_ADDR);
+  volatile uint32_t *mage_load_stream_idx = (volatile uint32_t *)(MAGE_LOAD_AGE_SEL_ADDR);
   for(int i = 0; i < LOAD_STREAM_SIZE; i++){
     *mage_load_stream_idx = load_stream[i];
     mage_load_stream_idx++;
@@ -364,7 +353,7 @@ void mage_set_load_stream(uint32_t load_stream[LOAD_STREAM_SIZE]){
  * @param reg The register index.
  */
 void mage_set_load_stream_reg(uint32_t load_stream, uint32_t reg){
-  int32_t *mage_load_stream_idx = (int32_t *)(MAGE_LOAD_AGE_SEL_ADDR);
+  volatile uint32_t *mage_load_stream_idx = (volatile uint32_t *)(MAGE_LOAD_AGE_SEL_ADDR);
   mage_load_stream_idx += reg;
   *mage_load_stream_idx = load_stream;
 }
@@ -375,8 +364,8 @@ void mage_set_load_stream_reg(uint32_t load_stream, uint32_t reg){
  * @param store_stream The Store Stream.
  */
 void mage_set_store_stream(uint32_t store_stream[STORE_STREAM_SIZE]){
-  int32_t *mage_store_stream_idx = (int32_t *)(MAGE_PEA_DMEM_SEL_ADDR);
-  for(int i = 0; i < LOAD_STREAM_SIZE; i++){
+  volatile uint32_t *mage_store_stream_idx = (volatile uint32_t *)(MAGE_PEA_DMEM_SEL_ADDR);
+  for(int i = 0; i < STORE_STREAM_SIZE; i++){
     *mage_store_stream_idx = store_stream[i];
     mage_store_stream_idx++;
   }
@@ -389,7 +378,7 @@ void mage_set_store_stream(uint32_t store_stream[STORE_STREAM_SIZE]){
  * @param reg The register index.
  */
 void mage_set_store_stream_reg(uint32_t store_stream, uint32_t reg){
-  int32_t *mage_store_stream_idx = (int32_t *)(MAGE_LOAD_AGE_SEL_ADDR);
+  volatile uint32_t *mage_store_stream_idx = (volatile uint32_t *)(MAGE_PEA_DMEM_SEL_ADDR);
   mage_store_stream_idx += reg;
   *mage_store_stream_idx = store_stream;
 }
@@ -409,8 +398,8 @@ void mage_set_store_stream_reg(uint32_t store_stream, uint32_t reg){
  * @param pea_col PEA column.
  */
 void mage_set_sel_out_pea_cols(uint8_t sel_out, uint8_t pea_col){
-  int32_t *mage_sel_out_pea = (int32_t *)(MAGE_COL_RES_SEL_START_ADDR);
-  write_mage_register(sel_out, mage_sel_out_pea, 0xFF, pea_col << 3);
+  volatile uint32_t *mage_sel_out_pea = (volatile uint32_t *)(MAGE_COL_RES_SEL_START_ADDR);
+  write_mage_register(sel_out, (uintptr_t)mage_sel_out_pea, 0xFF, pea_col << 3);
 }
 
 /**
@@ -421,9 +410,9 @@ void mage_set_sel_out_pea_cols(uint8_t sel_out, uint8_t pea_col){
  * @param pe_col PE col.
  */
 void mage_set_pe_acc_values(uint8_t acc_value, uint8_t pe_row, uint8_t pe_col){
-  int32_t *mage_acc_values_addr = (int32_t *)(MAGE_ACC_VALUES_START_ADDR);
+  volatile uint32_t *mage_acc_values_addr = (volatile uint32_t *)(MAGE_ACC_VALUES_START_ADDR);
   mage_acc_values_addr += pe_row;
-  write_mage_register(acc_value, mage_acc_values_addr, 0xFF, pe_col << 3);
+  write_mage_register(acc_value, (uintptr_t)mage_acc_values_addr, 0xFF, pe_col << 3);
 }
 %if out_stream_xbar == 1:
 /**
@@ -432,7 +421,7 @@ void mage_set_pe_acc_values(uint8_t acc_value, uint8_t pe_row, uint8_t pe_col){
  * @param sel_out The selectors for PEA output.
  */
 void mage_set_sel_out_xbar(uint8_t sel_out){
-  int32_t *mage_sel_out_xbar = (int32_t *)(MAGE_OUT_XBAR_START_ADDR);
+  volatile uint32_t *mage_sel_out_xbar = (volatile uint32_t *)(MAGE_OUT_XBAR_START_ADDR);
   *mage_sel_out_xbar = sel_out;
 }
 %endif

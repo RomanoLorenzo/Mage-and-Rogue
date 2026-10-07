@@ -42,7 +42,7 @@ mage-gen:
 		sw/mage.h \
 		sw/mage_params.h \
 		sw/mage.c \
-		sw/mage_x_heep.h
+		sw/mage_cva6.h
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute --tpl-sv hw/mage/execute/pea.sv.tpl
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute/pe/dae --tpl-sv hw/mage/execute/pe/dae/pe_dae.sv.tpl
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute/pe/dae --tpl-sv hw/mage/execute/pe/dae/pe_dae_part_gemm_acc.sv.tpl
@@ -62,7 +62,7 @@ mage-gen:
 	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.h.tpl
 	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_params.h.tpl
 	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.c.tpl
-	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_x_heep.h.tpl
+	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_cva6.h.tpl
 	util/format-verible;
 	$(PYTHON) $(REGTOOL_SCRIPT) -r -t $(REGTOOL_DEST_DIR) $(REGTOOL_SRC_FILE)
 	$(PYTHON) $(REGTOOL_SCRIPT) -D $(REGTOOL_SRC_FILE) > $(REGTOOL_SW_DEST_DIR)/mage_regs.h
@@ -84,7 +84,7 @@ rogue-gen:
 		sw/mage.h \
 		sw/mage_params.h \
 		sw/mage.c \
-		sw/mage_x_heep.h
+		sw/mage_cva6.h
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/stream --tpl-sv hw/mage/stream/streaming_interface.sv.tpl
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/packages --tpl-sv hw/mage/packages/stream_intf_pkg.sv.tpl
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/execute --tpl-sv hw/mage/execute/pea.sv.tpl
@@ -98,7 +98,7 @@ rogue-gen:
 	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.h.tpl
 	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_params.h.tpl
 	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.c.tpl
-	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_x_heep.h.tpl
+	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_cva6.h.tpl
 	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir . --tpl-sv mage-stream.core.tpl
 	util/format-verible;
 	$(PYTHON) $(REGTOOL_SCRIPT) -r -t $(REGTOOL_DEST_DIR) $(REGTOOL_SRC_FILE)
@@ -108,6 +108,8 @@ rogue-gen:
 mage-gen-sw:
 	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.h.tpl 
 	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_params.h.tpl 
+	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage.c.tpl 
+	$(PYTHON) util/mage-gen.py  --mage_cfg $(MAGE_CFG_HJSON) --outdir sw/ --tpl-sv sw/mage_cva6.h.tpl 
 	$(PYTHON) util/mage-gen.py --mage_cfg $(MAGE_CFG_HJSON) --outdir hw/mage/configuration --tpl-sv hw/mage/configuration/mage_regs.hjson.tpl 
 	$(PYTHON) $(REGTOOL_SCRIPT) -r -t $(REGTOOL_DEST_DIR) $(REGTOOL_SRC_FILE)
 	$(PYTHON) $(REGTOOL_SCRIPT) -D $(REGTOOL_SRC_FILE) > $(REGTOOL_SW_DEST_DIR)/mage_regs.h

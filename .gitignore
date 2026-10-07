@@ -35,5 +35,5 @@ Bender.lock
 /sw/mage.h
 /sw/mage.c
 /sw/mage_regs.h
-/sw/mage_x_heep.h
+/sw/mage_cva6.h
 /sw/mage_params.h

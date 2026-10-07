@@ -3,35 +3,8 @@
 
 #include <stdint.h>
 
+#include "mage_params.h"
 #include "mage_regs.h"
-
-// kernel memory size
-#define KMEM_SIZE ${kernel_len}
-// number of rows and columns of the PEA array
-#define MAGE_PEA_ROWS ${n_pea_rows}
-#define MAGE_PEA_COLS ${n_pea_cols}
-
-%if dae_cgra == 1:
-////////////////////////////////////////////////////////////////
-//                                                            //
-//                          DAE Mage                          //
-//                                                            //
-////////////////////////////////////////////////////////////////
-// number of hardware loops
-#define MAGE_NUM_HWLP 4
-// number of streams
-#define MAGE_N_STREAMS ${n_age_tot/n_age_per_stream}
-// number of ages per stream
-#define MAGE_N_AGE_PER_STREAM ${n_age_per_stream}
-// number of total age
-#define MAGE_N_AGES ${n_age_tot}
-// number of 32-bit registers used to store the selectors for the output of PEA rows
-#define SEL_OUT_PEA_SIZE MAGE_SEL_OUT_PEA_MULTIREG_COUNT
-// number of 32-bit registers used to store the configuration of load streams
-#define LOAD_STREAM_SIZE MAGE_L_STREAM_SEL_AGE_MULTIREG_COUNT
-// number of 32-bit registers used to store the configuration of store streams
-#define STORE_STREAM_SIZE MAGE_S_STREAM_SEL_AGE_MULTIREG_COUNT
-%endif
 
 %if streaming_cgra == 1:
 ////////////////////////////////////////////////////////////////
@@ -48,7 +21,7 @@ extern "C"
 {
 #endif
 
-static inline void write_mage_register(uint32_t p_val, uint32_t p_addr, uint32_t p_mask, uint8_t p_sel);
+void write_mage_register(uint32_t p_val, uintptr_t p_addr, uint32_t p_mask, uint8_t p_sel);
 
 
 /**
@@ -93,14 +66,19 @@ void mage_set_pe_constant(uint32_t pea_constant, uint8_t row, uint8_t col);
 /**
  * @brief Starts Mage.
  */
-void mage_start();
+void mage_start(void);
 
 /**
  * @brief Checks if Mage has finished its operation.
  * 
  * @return uint32_t Returns 1 if finished, 0 otherwise.
  */
-uint32_t is_mage_finished();
+uint32_t is_mage_finished(void);
+
+/**
+ * @brief Waits until Mage has finished its operation.
+ */
+void mage_wait_done(void);
 
 /**
  * @brief Sets the Iteration Interval (II).
@@ -137,12 +115,14 @@ void mage_set_address_map_blocksize(uint32_t blocksize);
  */
 void mage_set_general_cfg_bits(uint32_t cfg_bits);
 
+%if kernel_len != 1:
 /**
  * @brief Sets each PE control mode (static or time-multiplexed).
  * 
  * @param pea_control_snt The PEA control mode. Each bit sets the mode of a PE in row-major order.
  */
 void mage_set_pea_control_snt(uint32_t pea_control_snt);
+%endif
 
 /**
  * @brief Sets the Initial Loop Bounds (ILB) value for the Hardware Loops.
@@ -205,6 +185,7 @@ void mage_set_all_age_stride_modes(uint32_t modes[MAGE_N_AGES]);
 void mage_set_age_stride_mode(uint32_t stream_id, uint32_t age_id, uint32_t modes);
 
 
+%if kernel_len != 1:
 /**
  * @brief Sets the Prolog-Kernel-Epilog (PKE) value.
  * 
@@ -214,6 +195,7 @@ void mage_set_age_stride_mode(uint32_t stream_id, uint32_t age_id, uint32_t mode
  * @param len_dfg The length of the DFG.
  */
 void mage_set_pke(uint8_t p, uint8_t k, uint8_t e, uint8_t len_dfg);
+%endif
 
 /**
  * @brief Sets the MAGE configuration.
@@ -231,20 +213,6 @@ void mage_set_mage_cfg(uint32_t mage_mage_cfg[MAGE_N_STREAMS][MAGE_N_AGE_PER_STR
  * @param time_kernel The time instant of the kernel in which the configuration is applied.
  */
 void mage_set_age_cfg(uint32_t age_cfg, uint32_t stream_id, uint32_t age_id, uint32_t time_kernel);
-
-/**
- * @brief Sets the Induction Variable (IV) constraints for each AGE.
- * 
- * @param iv_constraints The IV constraints values.
- */
-void mage_set_iv_constraints(uint8_t iv_constraints[MAGE_N_AGES]);
-
-/**
- * @brief Sets the Induction Variable (IV) constraint for a specific AGE.
- * 
- * @param iv_constraints The IV constraint value.
- */
-void mage_set_iv_constraints_reg(uint8_t iv_constraint, int8_t stream_id, int8_t age_id);
 
 /**
  * @brief Sets the selectors for the outputs of PEA.

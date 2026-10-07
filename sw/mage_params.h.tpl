@@ -3,6 +3,18 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef BITFIELD_FIELD32_T_DEFINED
+#define BITFIELD_FIELD32_T_DEFINED
+typedef struct {
+  uint32_t mask;
+  uint32_t index;
+} bitfield_field32_t;
+#endif
+
 %if dae_cgra == 1:
 #include "mage_regs.h"
 %else:
@@ -34,11 +46,11 @@
 // number of total age
 #define MAGE_N_AGES ${n_age_tot}
 // number of 32-bit registers used to store the selectors for the output of PEA rows
-#define SEL_OUT_PEA_SIZE MAGE_SEL_OUT_PEA_MULTIREG_COUNT
+#define SEL_OUT_PEA_SIZE MAGE_OUT_PEA_SEL_MULTIREG_COUNT
 // number of 32-bit registers used to store the configuration of load streams
-#define LOAD_STREAM_SIZE MAGE_L_STREAM_SEL_AGE_MULTIREG_COUNT
+#define LOAD_STREAM_SIZE MAGE_LOAD_AGE_SEL_MULTIREG_COUNT
 // number of 32-bit registers used to store the configuration of store streams
-#define STORE_STREAM_SIZE MAGE_S_STREAM_SEL_AGE_MULTIREG_COUNT
+#define STORE_STREAM_SIZE MAGE_PEA_DMEM_SEL_MULTIREG_COUNT
 %endif
 
 %if streaming_cgra == 1:
@@ -58,4 +70,4 @@
 }
 #endif
 
-#endif // MAGE_PARAMS_H_
+#endif // _MAGE_PARAMS_H_
