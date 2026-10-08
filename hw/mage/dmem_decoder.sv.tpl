@@ -231,7 +231,7 @@ module dmem_decoder
       end
 
       for (int i = 0; i < N_BANKS; i++) begin
-        ext_dmem_we[i] = ext_dmem_we_i;
+        ext_dmem_we[i] = ext_dmem_req[i] & ext_dmem_we_i;
         ext_dmem_be[i] = ext_dmem_be_i;
       end
 
@@ -272,10 +272,10 @@ module dmem_decoder
         // SpM accepts requests from AGU and external system
         dmem_req_o = agu_dmem_req_i | ext_dmem_req;
 
-        // SpM accepts WE from AGU and external system
-        dmem_we_o  = agu_dmem_we_i | ext_dmem_we;
-
         for (int i = 0; i < N_BANKS; i++) begin
+
+          // SpM WE chosen based on external request bit
+          dmem_we_o[i] = (ext_dmem_req[i] == 1'b1) ? ext_dmem_we[i] : agu_dmem_we_i[i];
 
           // SpM BE chosen based on external request bit
           dmem_be_o[i] = (ext_dmem_req[i] == 1'b1) ? ext_dmem_be[i] : 4'b1111;
