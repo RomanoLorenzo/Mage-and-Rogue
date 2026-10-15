@@ -27,7 +27,7 @@ module pea
     // Input data from internal SpM
     input  logic   [N_IN_PEA-1:0][N_BITS-1:0]                       pea_data_i,
     // Selection of PEA outputs for each row
-    input  logic   [N_OUT_PEA-1:0][ ${max(m.log(n_pea_cols), 2)}-1:0] sel_output_i,
+    input  logic   [N_OUT_PEA-1:0][ ${int(max(m.ceil(m.log2(n_pea_cols)), 2))}-1:0] sel_output_i,
     // PEA output data
     output logic   [N_OUT_PEA-1:0][N_BITS-1:0]                      pea_data_o,
 %endif

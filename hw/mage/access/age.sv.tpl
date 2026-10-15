@@ -46,6 +46,8 @@ module age
     input logic is_acc_store_i,
     // asserted for load AGE, otherwise store AGE
     input logic lns_i,
+    // Asserted if stream uses XOR-based addressing mode
+    input logic xor_mode_i,
     ////////////////////////////////
     // Signals from Cfg Registers //
     ////////////////////////////////
@@ -128,8 +130,10 @@ module age
   // Stage 2
   logic [NBIT_FLAT_ADDR-1:0] x_div_bs;
   logic [NBIT_FLAT_ADDR-1:0] x_rem_bs;
-  logic [NBIT_N_BANKS-1:0]   age_bank_ls_stream_in_reg;
-  logic [NBIT_N_BANKS-1:0]   age_bank_ls_stream_out_reg;
+  logic [LOG_N_BANKS_PER_STREAM-1:0] age_bank_ls_stream_comb;
+  logic [LOG_N_BANKS_PER_STREAM-1:0] age_bank_ls_stream_in_reg;
+  logic [LOG_N_BANKS_PER_STREAM-1:0] age_bank_ls_stream_out_reg;
+  logic sn_step_number;
 
   ////////////////////////////////
   //        ROU signals         //
@@ -328,7 +332,7 @@ module age
         valid_ls_o <= valid_o;
 %if n_age_per_stream == 2:
         age_bank_ls_stream_o <= age_bank_ls_stream_out_reg[0];
-%elif n_age_per_stream == 4:
+%elif n_age_per_stream >= 4:
         age_bank_ls_stream_o <= age_bank_ls_stream_out_reg;
 %endif
       end else begin
@@ -399,16 +403,26 @@ module age
 % if n_age_per_stream >= 2:
     x_div_bs  = (flat_address_out_reg >> block_size_2);
     case(n_banks_2)
-      2'b00: age_bank_ls_stream_in_reg = start_bank_2;
-      2'b01: age_bank_ls_stream_in_reg = {1'b0, x_div_bs[0]} + start_bank_2;
-% if n_age_per_stream == 4:
-      2'b10: age_bank_ls_stream_in_reg = x_div_bs[1:0] + start_bank_2;
+      2'b00: age_bank_ls_stream_comb = LOG_N_BANKS_PER_STREAM'(start_bank_2);
+      2'b01: age_bank_ls_stream_comb = LOG_N_BANKS_PER_STREAM'(x_div_bs[0]) + LOG_N_BANKS_PER_STREAM'(start_bank_2);
+% if n_age_per_stream >= 4:
+      2'b10: age_bank_ls_stream_comb = LOG_N_BANKS_PER_STREAM'(x_div_bs[1:0]) + LOG_N_BANKS_PER_STREAM'(start_bank_2);
 % endif
-      default: age_bank_ls_stream_in_reg = '0;
+% if n_age_per_stream >= 8:
+      2'b11: age_bank_ls_stream_comb = LOG_N_BANKS_PER_STREAM'(x_div_bs[2:0]) + LOG_N_BANKS_PER_STREAM'(start_bank_2);
+% endif
+      default: age_bank_ls_stream_comb = '0;
     endcase
 %elif n_age_per_stream == 1:
-    age_bank_ls_stream_in_reg = start_bank_2;
+    age_bank_ls_stream_comb = LOG_N_BANKS_PER_STREAM'(start_bank_2);
 %endif
+
+    sn_step_number = ^(flat_address_out_reg >> (block_size_2 + n_banks_2));
+    if (xor_mode_i && (n_banks_2 != '0)) begin
+      age_bank_ls_stream_in_reg = age_bank_ls_stream_comb ^ (LOG_N_BANKS_PER_STREAM'(sn_step_number) << (n_banks_2 - 1));
+    end else begin
+      age_bank_ls_stream_in_reg = age_bank_ls_stream_comb;
+    end
 
 % if n_age_per_stream != 1:
     case(block_size_2)

@@ -59,10 +59,11 @@ module peripheral_regs
     ////////////////////////////////
     //    XBars Configuration     //
     ////////////////////////////////
-    output logic [N_OUT_PEA-1:0][KMEM_SIZE-1:0][${max(m.log(n_pea_cols),2)}-1:0] reg_cfg_sel_out_pea_o,
-    output logic [N_AGE_TOT-1:0][KMEM_SIZE-1:0][${max(m.log(n_age_per_stream), 2)}-1:0] reg_cfg_load_age_sel_o,
-    output logic [N_BANKS-1:0][KMEM_SIZE-1:0][${max(m.log(n_age_per_stream), 2)}-1:0] reg_cfg_pea_dmem_sel_o,
+    output logic [N_OUT_PEA-1:0][KMEM_SIZE-1:0][${int(max(m.ceil(m.log2(n_pea_cols)), 2))}-1:0] reg_cfg_sel_out_pea_o,
+    output logic [N_AGE_TOT-1:0][KMEM_SIZE-1:0][${int(max(m.ceil(m.log2(n_age_per_stream)), 2))}-1:0] reg_cfg_load_age_sel_o,
+    output logic [N_BANKS-1:0][KMEM_SIZE-1:0][${int(max(m.ceil(m.log2(n_age_per_stream)), 2))}-1:0] reg_cfg_pea_dmem_sel_o,
     output logic [1:0] reg_block_size_o,
+    output logic [N_STREAMS-1:0] reg_stream_xor_mode_o,
 %endif
 %if streaming_cgra == 1:
     ////////////////////////////////
@@ -130,6 +131,15 @@ module peripheral_regs
       .devmode_i(1'b1)
   );
 
+%if dae_cgra == 1:
+<%load_age_sel_count = int(m.ceil(((n_age_tot*m.log2(max(n_age_per_stream,4)))*kernel_len)/32))%>
+<%pea_dmem_sel_count = int(m.ceil(((n_age_tot*m.log2(max(n_age_per_stream,4)))*kernel_len)/32))%>
+<%out_pea_sel_count = int(m.ceil(((2*n_pea_rows*m.log2(max(n_pea_cols, 4)))*kernel_len)/32))%>
+  logic [${load_age_sel_count*32-1}:0] flat_load_age_sel;
+  logic [${pea_dmem_sel_count*32-1}:0] flat_pea_dmem_sel;
+  logic [${out_pea_sel_count*32-1}:0] flat_out_pea_sel;
+%endif
+
   always_comb begin
 %if dae_cgra == 1:
     ////////////////////////////////
@@ -145,6 +155,7 @@ module peripheral_regs
     hw2reg.status.start.d = 1'b0;
     reg_start_o = reg2hw.status.start.q;
     reg_block_size_o = reg2hw.block_size.q;
+    reg_stream_xor_mode_o = reg2hw.stream_xor_mode.q;
 
     ////////////////////////////////
     //   General Configuration    //
@@ -229,27 +240,43 @@ module peripheral_regs
     ////////////////////////////////
     //           XBars            //
     ////////////////////////////////
+%for r in range(load_age_sel_count):
+    flat_load_age_sel[${(r+1)*32-1}:${r*32}] = reg2hw.load_age_sel[${r}].q;
+%endfor
 <%prev_idx = 0%>
-<%idx = m.ceil(max(m.log(n_age_per_stream), 2))%>
+<%sel_bits = int(max(m.ceil(m.log2(n_age_per_stream)), 2))%>
+<%idx = sel_bits%>
 %for s in range(n_age_tot):
     %for k in range(kernel_len):
-      reg_cfg_load_age_sel_o[${s}][${k}] = reg2hw.load_age_sel[0].q[${idx-1}:${prev_idx}]; <%prev_idx = idx%> <%idx = idx + m.ceil(max(m.log(n_age_per_stream),2))%>
+    reg_cfg_load_age_sel_o[${s}][${k}] = flat_load_age_sel[${idx-1}:${prev_idx}]; <%prev_idx = idx%> <%idx = idx + sel_bits%>
     %endfor
 %endfor
 
+%for r in range(pea_dmem_sel_count):
+    flat_pea_dmem_sel[${(r+1)*32-1}:${r*32}] = reg2hw.pea_dmem_sel[${r}].q;
+%endfor
 <%prev_idx = 0%>
-<%idx = m.ceil(max(m.log(n_age_per_stream),2))%>
+<%idx = sel_bits%>
 %for s in range(n_age_tot):
     %for k in range(kernel_len):
-      reg_cfg_pea_dmem_sel_o[${s}][${k}] = reg2hw.pea_dmem_sel[0].q[${idx-1}:${prev_idx}]; <%prev_idx = idx%> <%idx = idx + m.ceil(max(m.log(n_age_per_stream),2))%>
+    reg_cfg_pea_dmem_sel_o[${s}][${k}] = flat_pea_dmem_sel[${idx-1}:${prev_idx}]; <%prev_idx = idx%> <%idx = idx + sel_bits%>
     %endfor
 %endfor
 
+%for r in range(out_pea_sel_count):
+    flat_out_pea_sel[${(r+1)*32-1}:${r*32}] = reg2hw.out_pea_sel[${r}].q;
+%endfor
 <%prev_idx = 0%>
-<%idx = m.ceil(max(m.log(n_pea_cols),2))%>
-%for r in range(n_pea_rows*2):
+<%out_sel_bits = int(max(m.ceil(m.log2(n_pea_cols)), 2))%>
+<%idx = out_sel_bits%>
+%for r in range(min(n_age_tot, 16)):
     %for k in range(kernel_len):
-      reg_cfg_sel_out_pea_o[${r}][${k}] = reg2hw.out_pea_sel[0].q[${idx-1}:${prev_idx}]; <%prev_idx = idx%> <%idx = idx + m.ceil(max(m.log(n_pea_cols),2))%>
+    reg_cfg_sel_out_pea_o[${r}][${k}] = flat_out_pea_sel[${idx-1}:${prev_idx}]; <%prev_idx = idx%> <%idx = idx + out_sel_bits%>
+    %endfor
+%endfor
+%for r in range(min(n_age_tot, 16), n_age_tot):
+    %for k in range(kernel_len):
+    reg_cfg_sel_out_pea_o[${r}][${k}] = '0;
     %endfor
 %endfor
 

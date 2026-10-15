@@ -55,8 +55,8 @@ package pea_pkg;
   localparam unsigned N_PE_PER_GROUP = N_AGE_PER_STREAM;
   localparam unsigned LOG_N_PE_PER_GROUP = $clog2(N_PE_PER_GROUP);
 
-  localparam unsigned N_IN_PEA = N*2;
-  localparam unsigned N_OUT_PEA = N*2;
+  localparam unsigned N_IN_PEA = N_AGE_TOT;
+  localparam unsigned N_OUT_PEA = N_AGE_TOT;
 %endif
 
 %if activation_computation == 1:

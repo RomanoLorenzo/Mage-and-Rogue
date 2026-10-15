@@ -20,10 +20,12 @@ module xbar_age_to_banks
     input  logic [ N_AGE-1:0][   N_BNKS-1:0] age_bank_i,
     input  logic [ N_AGE-1:0]                age_valid_i,
     input  logic [ N_AGE-1:0]                age_we_i,
+    input  logic [ N_AGE-1:0][   N_BITS-1:0] age_wdata_i,
     //Output signals to Bank Group
     output logic [N_BNKS-1:0][NBIT_ADDR-1:0] age_dmem_addr_o,
     output logic [N_BNKS-1:0]                age_dmem_bank_o,
-    output logic [N_BNKS-1:0]                age_dmem_we_o
+    output logic [N_BNKS-1:0]                age_dmem_we_o,
+    output logic [N_BNKS-1:0][   N_BITS-1:0] age_dmem_wdata_o
 );
 
   logic [ N_AGE-1:0][N_BNKS-1:0] age_bank;
@@ -59,12 +61,14 @@ module xbar_age_to_banks
 
   always_comb begin
     for (int j = 0; j < N_BNKS; j = j + 1) begin
-      age_dmem_addr_o[j] = '0;
-      age_dmem_we_o[j]   = '0;
+      age_dmem_addr_o[j]  = '0;
+      age_dmem_we_o[j]    = '0;
+      age_dmem_wdata_o[j] = '0;
       for (int i = 0; i < N_AGE; i = i + 1) begin
         if (age_bank[i][j] == 1'b1) begin
-          age_dmem_addr_o[j] = age_addr_i[i];
-          age_dmem_we_o[j]   = age_we[i];
+          age_dmem_addr_o[j]  = age_addr_i[i];
+          age_dmem_we_o[j]    = age_we[i];
+          age_dmem_wdata_o[j] = age_wdata_i[i];
           break;
         end
       end

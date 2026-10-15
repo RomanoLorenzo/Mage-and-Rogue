@@ -29,6 +29,7 @@ module agu
     input loop_pipeline_info_t reg_lp_info_i,
 % endif
     input logic [NBIT_II-1:0] reg_II_i,
+    input logic [N_STREAMS-1:0] reg_stream_xor_mode_i,
     ////////////////////////////////////////////////////////////////
     //                Re-Order Unit Configuration                 //
     ////////////////////////////////////////////////////////////////
@@ -179,6 +180,15 @@ module agu
       .end_lp_o(hwlp_rou_end_lp)
   );
 
+  logic [N_AGE_TOT-1:0] age_xor_mode;
+<% idx = 0 %>
+% for s, n_age in enumerate(n_age_per_stream_ds):
+  % for a in range(n_age):
+  assign age_xor_mode[${idx}] = reg_stream_xor_mode_i[${s}];
+  <% idx += 1 %>
+  % endfor
+% endfor
+
   //age_unit module
   age_unit age_unit_inst (
     .clk_i(clk_i),
@@ -198,6 +208,7 @@ module agu
     .block_size_i(age_block_size),
     .is_acc_store_i(age_is_acc_store),
     .stream_lns_i(age_stream_lns),
+    .age_xor_mode_i(age_xor_mode),
     .stream_addr_o(agu_addr_o),
     .stream_bank_o(agu_bank_o),
     .stream_bank_ls_o(agu_bank_ls_o),

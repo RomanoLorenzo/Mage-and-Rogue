@@ -50,6 +50,7 @@ module mage_top
 
 %if dae_cgra == 1:
   logic reg_start;
+  logic [N_STREAMS-1:0] reg_stream_xor_mode;
   ////////////////////////////////////////////////////////////////
   //                   General Configuration                    //
   ////////////////////////////////////////////////////////////////
@@ -76,16 +77,16 @@ module mage_top
   ////////////////////////////////////////////////////////////////
   //                  Crossbars Configuration                   //
   ////////////////////////////////////////////////////////////////
-  logic [N_AGE_TOT-1:0][KMEM_SIZE-1:0][${max(m.log(n_age_per_stream), 2)}-1:0] reg_cfg_load_age_sel;
-  logic [N_AGE_TOT-1:0][KMEM_SIZE-1:0][${max(m.log(n_age_per_stream), 2)}-1:0] reg_cfg_pea_dmem_sel;
-  logic [N_OUT_PEA-1:0][KMEM_SIZE-1:0][${max(m.log(n_pea_cols),2)}-1:0] reg_cfg_sel_out_pea;
+  logic [N_AGE_TOT-1:0][KMEM_SIZE-1:0][${int(max(m.ceil(m.log2(n_age_per_stream)), 2))}-1:0] reg_cfg_load_age_sel;
+  logic [N_AGE_TOT-1:0][KMEM_SIZE-1:0][${int(max(m.ceil(m.log2(n_age_per_stream)), 2))}-1:0] reg_cfg_pea_dmem_sel;
+  logic [N_OUT_PEA-1:0][KMEM_SIZE-1:0][${int(max(m.ceil(m.log2(n_pea_cols)), 2))}-1:0] reg_cfg_sel_out_pea;
   ////////////////////////////////////////////////////////////////
   //                     Crossbars Signals                      //
   ////////////////////////////////////////////////////////////////
-  logic [N_OUT_PEA-1:0][${max(m.log(n_pea_cols),2)}-1:0] cfg_sel_pea_output;
-  logic [N_AGE_TOT-1:0][${max(m.log(n_age_per_stream), 2)}-1:0] cfg_sel_dmem_pea;
-  logic [N_AGE_TOT-1:0][${max(m.log(n_age_per_stream), 2)}-1:0] load_age_sel;
-  logic [N_AGE_TOT-1:0][${max(m.log(n_age_per_stream), 2)}-1:0] pea_dmem_sel;
+  logic [N_OUT_PEA-1:0][${int(max(m.ceil(m.log2(n_pea_cols)), 2))}-1:0] cfg_sel_pea_output;
+  logic [N_AGE_TOT-1:0][${int(max(m.ceil(m.log2(n_age_per_stream)), 2))}-1:0] cfg_sel_dmem_pea;
+  logic [N_AGE_TOT-1:0][${int(max(m.ceil(m.log2(n_age_per_stream)), 2))}-1:0] load_age_sel;
+  logic [N_AGE_TOT-1:0][${int(max(m.ceil(m.log2(n_age_per_stream)), 2))}-1:0] pea_dmem_sel;
   ////////////////////////////////////////////////////////////////
   //             Reconfigurable Controllers and FSM             //
   ////////////////////////////////////////////////////////////////
@@ -225,6 +226,7 @@ module mage_top
       .reg_cfg_sel_out_pea_o(reg_cfg_sel_out_pea),
       .reg_cfg_load_age_sel_o(reg_cfg_load_age_sel),
       .reg_cfg_pea_dmem_sel_o(reg_cfg_pea_dmem_sel),
+      .reg_stream_xor_mode_o(reg_stream_xor_mode),
 %endif
 %if streaming_cgra == 1:
       .reg_cols_grouping_o(reg_cols_grouping),
@@ -408,6 +410,7 @@ module mage_top
       .reg_age_stride_mode_i(reg_age_stride_mode),
       .reg_age_acc_hwlp_sel_i(reg_age_acc_hwlp_sel),
       .reg_II_i(reg_II),
+      .reg_stream_xor_mode_i(reg_stream_xor_mode),
       .cfgmem_content_i(reg_mage_cfgmem),
 % if format_part == 1:
       .reg_acc_vec_mode_i(reg_acc_vec_mode),
@@ -480,7 +483,7 @@ module mage_top
       .sel_dmem_pea_i ({cfg_sel_dmem_pea[${idx+1}][0],  cfg_sel_dmem_pea[${idx}][0]}),
       .sel_pea_dmem_i ({pea_dmem_sel[${idx+1}][0],      pea_dmem_sel[${idx}][0]}),
       .in_pea_o       ({pea_inputs[${idx+1}],           pea_inputs[${idx}]}),
-      .in_dmem_o      ({dmem_wdata_o[${idx+1}],         dmem_wdata_o[${idx}]})
+      .in_dmem_o      ()
   );
 
   dmem_pea_select #(
@@ -518,7 +521,7 @@ module mage_top
       .sel_dmem_pea_i ({cfg_sel_dmem_pea[${idx+3}], cfg_sel_dmem_pea[${idx+2}], cfg_sel_dmem_pea[${idx+1}], cfg_sel_dmem_pea[${idx}]}),
       .sel_pea_dmem_i ({pea_dmem_sel[${idx+3}],     pea_dmem_sel[${idx+2}],     pea_dmem_sel[${idx+1}],     pea_dmem_sel[${idx}]}),
       .in_pea_o       ({pea_inputs[${idx+3}],       pea_inputs[${idx+2}],       pea_inputs[${idx+1}],       pea_inputs[${idx}]}),
-      .in_dmem_o      ({dmem_wdata_o[${idx+3}],     dmem_wdata_o[${idx+2}],     dmem_wdata_o[${idx+1}],     dmem_wdata_o[${idx}]})
+      .in_dmem_o      ()
   );
 
   %for j in range(4):
@@ -533,6 +536,35 @@ module mage_top
     );
   %endfor
   <% idx += 4%>
+  %elif n_age_per_stream_ds[s] == 8:
+
+  ////////////////////////////////////////
+  //        Stream ${s}: Xbar 8x8       //
+  ////////////////////////////////////////
+
+  xbar_pea_banks #(
+      .XBAR_SIZE(8)
+  )  xbar_pea_banks_8x8_stream_${s} (
+      .out_pea_i      ({pea_outputs[${idx+7}],      pea_outputs[${idx+6}],      pea_outputs[${idx+5}],      pea_outputs[${idx+4}],      pea_outputs[${idx+3}],      pea_outputs[${idx+2}],      pea_outputs[${idx+1}],      pea_outputs[${idx}]}),
+      .out_dmem_i     ({dmem_rdata_i[${idx+7}],     dmem_rdata_i[${idx+6}],     dmem_rdata_i[${idx+5}],     dmem_rdata_i[${idx+4}],     dmem_rdata_i[${idx+3}],     dmem_rdata_i[${idx+2}],     dmem_rdata_i[${idx+1}],     dmem_rdata_i[${idx}]}),
+      .sel_dmem_pea_i ({cfg_sel_dmem_pea[${idx+7}][2:0], cfg_sel_dmem_pea[${idx+6}][2:0], cfg_sel_dmem_pea[${idx+5}][2:0], cfg_sel_dmem_pea[${idx+4}][2:0], cfg_sel_dmem_pea[${idx+3}][2:0], cfg_sel_dmem_pea[${idx+2}][2:0], cfg_sel_dmem_pea[${idx+1}][2:0], cfg_sel_dmem_pea[${idx}][2:0]}),
+      .sel_pea_dmem_i ({pea_dmem_sel[${idx+7}][2:0],     pea_dmem_sel[${idx+6}][2:0],     pea_dmem_sel[${idx+5}][2:0],     pea_dmem_sel[${idx+4}][2:0],     pea_dmem_sel[${idx+3}][2:0],     pea_dmem_sel[${idx+2}][2:0],     pea_dmem_sel[${idx+1}][2:0],     pea_dmem_sel[${idx}][2:0]}),
+      .in_pea_o       ({pea_inputs[${idx+7}],       pea_inputs[${idx+6}],       pea_inputs[${idx+5}],       pea_inputs[${idx+4}],       pea_inputs[${idx+3}],       pea_inputs[${idx+2}],       pea_inputs[${idx+1}],       pea_inputs[${idx}]}),
+      .in_dmem_o      ()
+  );
+
+  %for j in range(8):
+    dmem_pea_select #(
+      .N_AGE(8)
+    ) dmem_pea_select_8x8_n${j}_stream_${s} (
+        .reg_load_age_sel_i(load_age_sel[${idx+j}][2:0]),
+        .age_bank_load_i   ({agu_bank_ls[${idx+7}][2:0], agu_bank_ls[${idx+6}][2:0], agu_bank_ls[${idx+5}][2:0], agu_bank_ls[${idx+4}][2:0], agu_bank_ls[${idx+3}][2:0], agu_bank_ls[${idx+2}][2:0], agu_bank_ls[${idx+1}][2:0], agu_bank_ls[${idx}][2:0]}),
+        .valid_ls_i        ({agu_valid_ls[${idx+7}],   agu_valid_ls[${idx+6}],   agu_valid_ls[${idx+5}],   agu_valid_ls[${idx+4}],   agu_valid_ls[${idx+3}],   agu_valid_ls[${idx+2}],   agu_valid_ls[${idx+1}],   agu_valid_ls[${idx}]}),
+        .sel_load_stream_o (cfg_sel_dmem_pea[${idx+j}][2:0]),
+        .valid_o(pea_data_valid[${idx+j}])
+    );
+  %endfor
+  <% idx += 8%>
   %endif
 %endfor
 
@@ -575,9 +607,11 @@ module mage_top
       .age_valid_i      ({agu_valid[${idx+1}],      agu_valid[${idx}]}),
       .age_we_i         ({agu_lns[${idx+1}],        agu_lns[${idx}]}),
       .age_bank_i       ({agu_bank[${idx+1}][1:0],  agu_bank[${idx}][1:0]}),
+      .age_wdata_i      ({pea_outputs[${idx+1}],    pea_outputs[${idx}]}),
       .age_dmem_addr_o  ({dmem_addr_o[${idx+1}],    dmem_addr_o[${idx}]}),
       .age_dmem_bank_o  ({dmem_req_o[${idx+1}],     dmem_req_o[${idx}]}),
-      .age_dmem_we_o    ({dmem_we_o[${idx+1}],      dmem_we_o[${idx}]})
+      .age_dmem_we_o    ({dmem_we_o[${idx+1}],      dmem_we_o[${idx}]}),
+      .age_dmem_wdata_o ({dmem_wdata_o[${idx+1}],   dmem_wdata_o[${idx}]})
   );
   
   <% idx += 2%>
@@ -595,12 +629,36 @@ module mage_top
       .age_valid_i      ({agu_valid[${idx+3}],      agu_valid[${idx+2}],      agu_valid[${idx+1}],      agu_valid[${idx}]}),
       .age_we_i         ({agu_lns[${idx+3}],        agu_lns[${idx+2}],        agu_lns[${idx+1}],        agu_lns[${idx}]}),
       .age_bank_i       ({agu_bank[${idx+3}][3:0],  agu_bank[${idx+2}][3:0],  agu_bank[${idx+1}][3:0],  agu_bank[${idx}][3:0]}),
+      .age_wdata_i      ({pea_outputs[${idx+3}],    pea_outputs[${idx+2}],    pea_outputs[${idx+1}],    pea_outputs[${idx}]}),
       .age_dmem_addr_o  ({dmem_addr_o[${idx+3}],    dmem_addr_o[${idx+2}],    dmem_addr_o[${idx+1}],    dmem_addr_o[${idx}]}),
       .age_dmem_bank_o  ({dmem_req_o[${idx+3}],     dmem_req_o[${idx+2}],     dmem_req_o[${idx+1}],     dmem_req_o[${idx}]}),
-      .age_dmem_we_o    ({dmem_we_o[${idx+3}],      dmem_we_o[${idx+2}],      dmem_we_o[${idx+1}],      dmem_we_o[${idx}]})
+      .age_dmem_we_o    ({dmem_we_o[${idx+3}],      dmem_we_o[${idx+2}],      dmem_we_o[${idx+1}],      dmem_we_o[${idx}]}),
+      .age_dmem_wdata_o ({dmem_wdata_o[${idx+3}],   dmem_wdata_o[${idx+2}],   dmem_wdata_o[${idx+1}],   dmem_wdata_o[${idx}]})
   );
 
   <% idx += 4%>
+  %elif n_age_per_stream_ds[s] == 8:
+
+  ////////////////////////////////////////
+  //        Stream ${s}: Xbar 8x8       //
+  ////////////////////////////////////////
+
+  xbar_age_to_banks #(
+      .N_AGE(8),
+      .N_BNKS(8)
+    ) xbar_age_to_banks_8x8_stream_${s} (
+      .age_addr_i       ({agu_addr[${idx+7}],       agu_addr[${idx+6}],       agu_addr[${idx+5}],       agu_addr[${idx+4}],       agu_addr[${idx+3}],       agu_addr[${idx+2}],       agu_addr[${idx+1}],       agu_addr[${idx}]}),
+      .age_valid_i      ({agu_valid[${idx+7}],      agu_valid[${idx+6}],      agu_valid[${idx+5}],      agu_valid[${idx+4}],      agu_valid[${idx+3}],      agu_valid[${idx+2}],      agu_valid[${idx+1}],      agu_valid[${idx}]}),
+      .age_we_i         ({agu_lns[${idx+7}],        agu_lns[${idx+6}],        agu_lns[${idx+5}],        agu_lns[${idx+4}],        agu_lns[${idx+3}],        agu_lns[${idx+2}],        agu_lns[${idx+1}],        agu_lns[${idx}]}),
+      .age_bank_i       ({agu_bank[${idx+7}][7:0],  agu_bank[${idx+6}][7:0],  agu_bank[${idx+5}][7:0],  agu_bank[${idx+4}][7:0],  agu_bank[${idx+3}][7:0],  agu_bank[${idx+2}][7:0],  agu_bank[${idx+1}][7:0],  agu_bank[${idx}][7:0]}),
+      .age_wdata_i      ({pea_outputs[${idx+7}],    pea_outputs[${idx+6}],    pea_outputs[${idx+5}],    pea_outputs[${idx+4}],    pea_outputs[${idx+3}],    pea_outputs[${idx+2}],    pea_outputs[${idx+1}],    pea_outputs[${idx}]}),
+      .age_dmem_addr_o  ({dmem_addr_o[${idx+7}],    dmem_addr_o[${idx+6}],    dmem_addr_o[${idx+5}],    dmem_addr_o[${idx+4}],    dmem_addr_o[${idx+3}],    dmem_addr_o[${idx+2}],    dmem_addr_o[${idx+1}],    dmem_addr_o[${idx}]}),
+      .age_dmem_bank_o  ({dmem_req_o[${idx+7}],     dmem_req_o[${idx+6}],     dmem_req_o[${idx+5}],     dmem_req_o[${idx+4}],     dmem_req_o[${idx+3}],     dmem_req_o[${idx+2}],     dmem_req_o[${idx+1}],     dmem_req_o[${idx}]}),
+      .age_dmem_we_o    ({dmem_we_o[${idx+7}],      dmem_we_o[${idx+6}],      dmem_we_o[${idx+5}],      dmem_we_o[${idx+4}],      dmem_we_o[${idx+3}],      dmem_we_o[${idx+2}],      dmem_we_o[${idx+1}],      dmem_we_o[${idx}]}),
+      .age_dmem_wdata_o ({dmem_wdata_o[${idx+7}],   dmem_wdata_o[${idx+6}],   dmem_wdata_o[${idx+5}],   dmem_wdata_o[${idx+4}],   dmem_wdata_o[${idx+3}],   dmem_wdata_o[${idx+2}],   dmem_wdata_o[${idx+1}],   dmem_wdata_o[${idx}]})
+  );
+
+  <% idx += 8%>
   %endif
 %endfor
 

@@ -144,6 +144,18 @@
         },
       ]
     },
+    { name:     "STREAM_XOR_MODE",
+      desc:     "Per-stream XOR addressing mode enable for NTT (1 bit per stream)",
+      swaccess: "rw",
+      hwaccess: "hro",
+      resval:   0,
+      fields: [
+        { bits: "${n_streams-1}:0", 
+          name: "STREAM_XOR_MODE",
+          desc: "Bit s enables XOR conflict-free addressing for Stream s" 
+        },
+      ]
+    },
 %if kernel_len != 1:
     { name:     "PEA_CONTROL_SNT",
       desc:     "Each bit controls the control mode of each pe, static or time-multiplexed",

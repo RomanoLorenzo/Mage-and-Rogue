@@ -42,7 +42,7 @@ package agu_pkg;
   //Log2 of Number of streams/AGEs per stream/AGE group
   localparam unsigned LOG_N_AGE_PER_STREAM = (N_AGE_PER_STREAM == 1) ? 1 : $clog2(N_AGE_PER_STREAM);
   //Number of stream/AGE groups
-  localparam unsigned N_STREAMS = N_AGE_TOT / N_AGE_PER_STREAM;
+  localparam unsigned N_STREAMS = ${n_streams};
   //Number of bits for blocksize in AGE configuration word
   localparam unsigned NBIT_BLOCK_SIZE = 2;
   //Number of bits required to represent the number of banks in AGE configuration word

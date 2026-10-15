@@ -43,6 +43,7 @@ module age_unit
     input logic [N_AGE_TOT-1:0] is_acc_store_i,
     //load_not_store for each stream
     input logic [N_AGE_TOT-1:0] stream_lns_i,
+    input logic [N_AGE_TOT-1:0] age_xor_mode_i,
     //Outputs: for each stream group, for each stream, address-bank-validity-lns are generated
     output logic [N_AGE_TOT-1:0][NBIT_ADDR-1:0] stream_addr_o,
     output logic [N_AGE_TOT-1:0][N_BANKS_PER_STREAM-1:0] stream_bank_o,
@@ -75,6 +76,7 @@ module age_unit
           .block_size_i(block_size_i[i]),
           .is_acc_store_i(is_acc_store_i[i]),
           .lns_i(stream_lns_i[i]),
+          .xor_mode_i(age_xor_mode_i[i]),
           .age_addr_o(stream_addr_o[i]),
           .age_bank_o(stream_bank_o[i]),
           .age_bank_ls_stream_o(stream_bank_ls_o[i]),

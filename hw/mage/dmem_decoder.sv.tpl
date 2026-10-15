@@ -42,8 +42,16 @@ module dmem_decoder
 
 );
 
+<%
+import math as m
+word_bits = int(m.log2(num_words))
+bank_bits = max(int(m.ceil(m.log2(n_age_tot))), 1)
+bank_lsb = word_bits
+bank_msb = bank_lsb + bank_bits - 1
+addr_lrs_width = max(bank_msb + 1, 17)
+%>
   logic                                 is_dmem_address;
-  logic [                 16:0]         addr_lrs_2;
+  logic [           ${addr_lrs_width-1}:0] addr_lrs_2;
   logic [          N_BANKS-1:0]         active_banks;
 
   logic [          N_BANKS-1:0]         ext_dmem_req;
@@ -55,7 +63,7 @@ module dmem_decoder
   logic [$clog2(BANK_SIZE)-1:0]         addr_to_bank;
 
 
-  assign addr_lrs_2 = ext_dmem_addr_i[18:2];
+  assign addr_lrs_2 = ext_dmem_addr_i[${addr_lrs_width+1}:2];
 
   always_comb begin
 
@@ -66,17 +74,7 @@ module dmem_decoder
       2'b00: begin
         addr_to_bank = addr_lrs_2[$clog2(BANK_SIZE)-1:0];
 %for i in range(n_age_tot):
-  %if num_words == 1024:
-        active_banks[${i}] = (addr_lrs_2[13:10] == ${i}) ? 1'b1 : 1'b0;
-  %elif num_words == 2048:
-        active_banks[${i}] = (addr_lrs_2[14:11] == ${i}) ? 1'b1 : 1'b0;
-  %elif num_words == 4096:
-        active_banks[${i}] = (addr_lrs_2[15:12] == ${i}) ? 1'b1 : 1'b0;
-  %elif num_words == 8192:
-        active_banks[${i}] = (addr_lrs_2[16:13] == ${i}) ? 1'b1 : 1'b0;
-  %elif num_words == 512:
-        active_banks[${i}] = (addr_lrs_2[12:9] == ${i}) ? 1'b1 : 1'b0;
-  %endif
+        active_banks[${i}] = (addr_lrs_2[${bank_msb}:${bank_lsb}] == ${i}) ? 1'b1 : 1'b0;
 %endfor 
       end
 
@@ -139,6 +137,11 @@ module dmem_decoder
         active_banks[${k+2}] = ((addr_lrs_2[12:9] == ${k+2} || addr_lrs_2[12:9] == ${k+3}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;
         active_banks[${k+3}] = ((addr_lrs_2[12:9] == ${k+2} || addr_lrs_2[12:9] == ${k+3}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0; <%k = k + 4%>
       %endif
+  %elif n_age_per_stream_ds[i] == 8:
+    %for pair in range(4):
+        active_banks[${k}]   = ((addr_lrs_2[${bank_msb}:${bank_lsb}] == ${k} || addr_lrs_2[${bank_msb}:${bank_lsb}] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;
+        active_banks[${k+1}] = ((addr_lrs_2[${bank_msb}:${bank_lsb}] == ${k} || addr_lrs_2[${bank_msb}:${bank_lsb}] == ${k+1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0; <%k = k + 2%>
+    %endfor
   %endif
 %endfor 
       end
@@ -202,6 +205,13 @@ module dmem_decoder
         active_banks[${k+2}] = ((addr_lrs_2[12:9] == ${k} || addr_lrs_2[12:9] == ${k+1} || addr_lrs_2[12:9] == ${k+2} || addr_lrs_2[12:9] == ${k+3}) && addr_lrs_2[1:0] == 2'b10) ? 1'b1 : 1'b0;
         active_banks[${k+3}] = ((addr_lrs_2[12:9] == ${k} || addr_lrs_2[12:9] == ${k+1} || addr_lrs_2[12:9] == ${k+2} || addr_lrs_2[12:9] == ${k+3}) && addr_lrs_2[1:0] == 2'b11) ? 1'b1 : 1'b0;<%k = k + 4%>
   %endif
+  %elif n_age_per_stream_ds[i] == 8:
+    %for quad in range(2):
+        active_banks[${k}]   = ((addr_lrs_2[${bank_msb}:${bank_lsb}] >= ${k} && addr_lrs_2[${bank_msb}:${bank_lsb}] <= ${k+3}) && addr_lrs_2[1:0] == 2'b00) ? 1'b1 : 1'b0;
+        active_banks[${k+1}] = ((addr_lrs_2[${bank_msb}:${bank_lsb}] >= ${k} && addr_lrs_2[${bank_msb}:${bank_lsb}] <= ${k+3}) && addr_lrs_2[1:0] == 2'b01) ? 1'b1 : 1'b0;
+        active_banks[${k+2}] = ((addr_lrs_2[${bank_msb}:${bank_lsb}] >= ${k} && addr_lrs_2[${bank_msb}:${bank_lsb}] <= ${k+3}) && addr_lrs_2[1:0] == 2'b10) ? 1'b1 : 1'b0;
+        active_banks[${k+3}] = ((addr_lrs_2[${bank_msb}:${bank_lsb}] >= ${k} && addr_lrs_2[${bank_msb}:${bank_lsb}] <= ${k+3}) && addr_lrs_2[1:0] == 2'b11) ? 1'b1 : 1'b0; <%k = k + 4%>
+    %endfor
   %endif
 %endfor 
       end
