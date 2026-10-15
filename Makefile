@@ -214,4 +214,4 @@ vericheck: flist
 
 clean-repo: clean-build clean-synthesis
 	rm -rf .bender
-	git clean -fdX -- ':!doc/doc.pdf' ':!vendor/*.hjson'
+	git clean -fdX -- ':!doc/' ':!vendor/*.hjson'

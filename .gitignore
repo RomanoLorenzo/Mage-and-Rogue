@@ -8,7 +8,7 @@ vivado.log
 /util/topgen/__pycache__
 .bender
 Bender.lock
-/doc/doc.pdf
+/doc/
 
 /hw/mage/stream/streaming_interface.sv
 /hw/mage/packages/stream_intf_pkg.sv
