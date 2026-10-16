@@ -115,6 +115,13 @@ void mage_set_address_map_blocksize(uint32_t blocksize);
  */
 void mage_set_general_cfg_bits(uint32_t cfg_bits);
 
+/**
+ * @brief Sets per-stream XOR addressing mode for conflict-free NTT.
+ * 
+ * @param stream_xor_mask Bitmask where bit s enables XOR addressing for Stream s.
+ */
+void mage_set_stream_xor_mode(uint32_t stream_xor_mask);
+
 %if kernel_len != 1:
 /**
  * @brief Sets each PE control mode (static or time-multiplexed).

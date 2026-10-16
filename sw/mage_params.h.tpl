@@ -40,7 +40,7 @@ typedef struct {
 // number of hardware loops
 #define MAGE_NUM_HWLP 4
 // number of streams
-#define MAGE_N_STREAMS ${int(n_age_tot/n_age_per_stream)}
+#define MAGE_N_STREAMS ${n_streams}
 // number of ages per stream
 #define MAGE_N_AGE_PER_STREAM ${n_age_per_stream}
 // number of total age
