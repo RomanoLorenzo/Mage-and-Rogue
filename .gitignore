@@ -9,6 +9,7 @@ vivado.log
 .bender
 Bender.lock
 /doc/
+verilator_build.log
 
 /hw/mage/stream/streaming_interface.sv
 /hw/mage/packages/stream_intf_pkg.sv
