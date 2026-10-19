@@ -23,6 +23,40 @@ extern "C"
 
 void write_mage_register(uint32_t p_val, uintptr_t p_addr, uint32_t p_mask, uint8_t p_sel);
 
+////////////////////////////////////////////////////////////////
+//                    PE Instructions & Muxes                 //
+////////////////////////////////////////////////////////////////
+#define MAGE_PE_OP_NOP   0x00U
+#define MAGE_PE_OP_MUL   0x01U
+#define MAGE_PE_OP_SUB   0x02U
+#define MAGE_PE_OP_LSH   0x03U
+#define MAGE_PE_OP_LRSH  0x04U
+#define MAGE_PE_OP_ARSH  0x05U
+#define MAGE_PE_OP_MAX   0x06U
+#define MAGE_PE_OP_MIN   0x07U
+#define MAGE_PE_OP_ABS   0x08U
+#define MAGE_PE_OP_ACC   0x09U
+#define MAGE_PE_OP_ADD   0x0AU
+#define MAGE_PE_OP_FW_A  0x0BU
+#define MAGE_PE_OP_FW_B  0x0CU
+#define MAGE_PE_OP_MULH  0x0DU
+
+#define MAGE_PE_MUX_CONST      0x0U
+#define MAGE_PE_MUX_MEM_IN_0   0x1U
+#define MAGE_PE_MUX_MEM_IN_1   0x2U
+#define MAGE_PE_MUX_MEM_IN_2   0x3U
+#define MAGE_PE_MUX_MEM_IN_3   0x4U
+#define MAGE_PE_MUX_MEM_IN_4   0x5U
+#define MAGE_PE_MUX_UP         0x6U
+#define MAGE_PE_MUX_LEFT       0x7U
+#define MAGE_PE_MUX_RIGHT      0x8U
+#define MAGE_PE_MUX_DOWN       0x9U
+#define MAGE_PE_MUX_SELF       0xAU
+
+#define MAGE_BUILD_PE_CFG(op, mux_a, mux_b) \
+  (((uint32_t)(op) << 8) | ((uint32_t)(mux_b) << 4) | ((uint32_t)(mux_a) << 0))
+
+
 
 /**
  * @brief Sets the PEA configuration.

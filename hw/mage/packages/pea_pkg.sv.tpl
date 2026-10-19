@@ -197,7 +197,8 @@ package pea_pkg;
     ACC       = 5'b01001,
     ADD       = 5'b01010,
     FW_A      = 5'b01011,
-    FW_B      = 5'b01100
+    FW_B      = 5'b01100,
+    MULH      = 5'b01101
   } fu_instr_t;
 %endif
 

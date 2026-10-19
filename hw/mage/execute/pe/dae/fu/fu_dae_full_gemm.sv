@@ -26,6 +26,8 @@ module fu_dae_full_gemm
 
   logic [    N_BITS:0] add_res;
   logic [  N_BITS-1:0] mul_res;
+  logic signed [2*N_BITS-1:0] mul_res_full;
+  logic [  N_BITS-1:0] mulh_res;
   logic [  N_BITS-1:0] shift_res;
   logic [2*N_BITS-1:0] shift_res_ext;
   logic [  N_BITS-1:0] lsh_res;
@@ -86,8 +88,10 @@ module fu_dae_full_gemm
   // 32-bit adder
   assign add_res = add_op1 + add_op2;
 
-  // 32-bit mul
-  assign mul_res = mul_op1 * mul_op2;
+  // 32-bit mul (full 64-bit signed product)
+  assign mul_res_full = $signed(mul_op1) * $signed(mul_op2);
+  assign mul_res      = mul_res_full[N_BITS-1:0];
+  assign mulh_res     = mul_res_full[2*N_BITS-1:N_BITS];
 
   // 32-bit shifter
   logic shift_overflow;
@@ -144,7 +148,7 @@ module fu_dae_full_gemm
         add_op2 = {b_signed, 1'b0};
       end
 
-      MUL: begin
+      MUL, MULH: begin
         mul_op1 = a_signed;
         mul_op2 = b_signed;
       end
@@ -195,6 +199,7 @@ module fu_dae_full_gemm
       ADD: res_o = add_res[N_BITS:1];
       ACC: res_o = add_res[N_BITS:1];
       MUL: res_o = mul_res;
+      MULH: res_o = mulh_res;
       SUB: res_o = add_res[N_BITS:1];
       LSH: res_o = lsh_res;
       ARSH: res_o = shift_res;
