@@ -18,32 +18,32 @@ module fu_dae_full_gemm
     output logic      [N_BITS-1:0] res_o
 );
 
-  logic                acc_match;
+  logic                       acc_match;
 
   // Internal signed versions of the inputs
-  logic [  N_BITS-1:0] a_signed;
-  logic [  N_BITS-1:0] b_signed;
+  logic        [  N_BITS-1:0] a_signed;
+  logic        [  N_BITS-1:0] b_signed;
 
-  logic [    N_BITS:0] add_res;
-  logic [  N_BITS-1:0] mul_res;
+  logic        [    N_BITS:0] add_res;
+  logic        [  N_BITS-1:0] mul_res;
   logic signed [2*N_BITS-1:0] mul_res_full;
-  logic [  N_BITS-1:0] mulh_res;
-  logic [  N_BITS-1:0] shift_res;
-  logic [2*N_BITS-1:0] shift_res_ext;
-  logic [  N_BITS-1:0] lsh_res;
+  logic        [  N_BITS-1:0] mulh_res;
+  logic        [  N_BITS-1:0] shift_res;
+  logic        [2*N_BITS-1:0] shift_res_ext;
+  logic        [  N_BITS-1:0] lsh_res;
 
-  logic [  N_BITS-1:0] mul_op1;
-  logic [  N_BITS-1:0] mul_op2;
+  logic        [  N_BITS-1:0] mul_op1;
+  logic        [  N_BITS-1:0] mul_op2;
 
-  logic [  N_BITS-1:0] lsh_op1_rev;
-  logic [2*N_BITS-1:0] shift_op1;
-  logic [         4:0] shift_op2;
+  logic        [  N_BITS-1:0] lsh_op1_rev;
+  logic        [2*N_BITS-1:0] shift_op1;
+  logic        [         4:0] shift_op2;
 
-  logic [    N_BITS:0] add_op1;
-  logic [    N_BITS:0] add_op2;
+  logic        [    N_BITS:0] add_op1;
+  logic        [    N_BITS:0] add_op2;
 
-  logic [  N_BITS-1:0] op1_neg;
-  logic [  N_BITS-1:0] op2_neg;
+  logic        [  N_BITS-1:0] op1_neg;
+  logic        [  N_BITS-1:0] op2_neg;
 
   assign b_signed  = $signed(b_i);
 
@@ -82,11 +82,11 @@ module fu_dae_full_gemm
   ////////////////////////////////
 
   // Negated versione of a and b
-  assign op1_neg = ~a_signed;
-  assign op2_neg = ~b_signed;
+  assign op1_neg      = ~a_signed;
+  assign op2_neg      = ~b_signed;
 
   // 32-bit adder
-  assign add_res = add_op1 + add_op2;
+  assign add_res      = add_op1 + add_op2;
 
   // 32-bit mul (full 64-bit signed product)
   assign mul_res_full = $signed(mul_op1) * $signed(mul_op2);

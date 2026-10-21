@@ -41,11 +41,15 @@ module pe_dae
 %if has_delay_pe == 1:
   delay_pe_mux_sel_t                          delay_pe_mux_sel;
   delay_pe_op_mux_sel_t                       delay_pe_op_mux_sel;
+  delay_pe_mux_sel_t                          delay_fwd_sel;
+  pe_mux_sel_t                                delay_in_pe_sel;
+  logic                 [                1:0] delay_depth;
   // delay operands signals
   logic                 [         N_BITS-1:0] delay_op_fu;
+  logic                 [         N_BITS-1:0] delay_op_fwd;
+  logic                 [         N_BITS-1:0] delay_op_pe_in;
   logic                 [         N_BITS-1:0] delay_op_out;
-  logic                 [         N_BITS-1:0] delay_op_out_d1;
-  logic                 [         N_BITS-1:0] delay_op_out_d2;
+  logic                 [3:0][    N_BITS-1:0] delay_pipe;
 %endif
 
     // fu signals
@@ -84,8 +88,11 @@ module pe_dae
   assign vec_mode  = ctrl_pe_i[VEC_MODE_SEL_MSB : VEC_MODE_SEL_LSB];
 %endif
 %if has_delay_pe == 1:
-  assign delay_pe_mux_sel = delay_pe_mux_sel_t'(ctrl_pe_i[DELAY_PE_SEL_MSB : DELAY_PE_SEL_LSB]);
-  assign delay_pe_op_mux_sel  = delay_pe_op_mux_sel_t'(ctrl_pe_i[DELAY_PE_OP_SEL_MSB : DELAY_PE_OP_SEL_LSB]);
+  assign delay_pe_mux_sel    = delay_pe_mux_sel_t'(ctrl_pe_i[DELAY_PE_SEL_MSB : DELAY_PE_SEL_LSB]);
+  assign delay_pe_op_mux_sel = delay_pe_op_mux_sel_t'(ctrl_pe_i[DELAY_PE_OP_SEL_MSB : DELAY_PE_OP_SEL_LSB]);
+  assign delay_fwd_sel       = delay_pe_mux_sel_t'(ctrl_pe_i[DELAY_FWD_SEL_MSB : DELAY_FWD_SEL_LSB]);
+  assign delay_in_pe_sel     = pe_mux_sel_t'(ctrl_pe_i[DELAY_IN_PE_SEL_MSB : DELAY_IN_PE_SEL_LSB]);
+  assign delay_depth         = ctrl_pe_i[DELAY_DEPTH_MSB : DELAY_DEPTH_LSB];
 %endif
 
   ////////////////////////////////
@@ -125,72 +132,55 @@ module pe_dae
       -> The chosen delay-operand is fed to FU
   */
 
-  // delayed operand selection, it is one among the possible operands of the PE FU 
+  // delayed operand selection to be fed to FU:
   assign delay_op_fu    = neigh_delay_op_i[delay_pe_mux_sel];
-
+  // delayed operand selection for forwarding:
+  assign delay_op_fwd   = neigh_delay_op_i[delay_fwd_sel];
+  // direct PE regular input selection to be ingested into delay channel:
+  assign delay_op_pe_in = pe_op_i[delay_in_pe_sel];
 
   /* Output delay data selection:
-    ->  delay_op_out = fu_out      if delay_pe_op_mux_sel == D_PE_RES
-    ->  delay_op_out = op_a        if delay_pe_op_mux_sel == D_PE_OP_A
-    ->  delay_op_out = op_b        if delay_pe_op_mux_sel == D_PE_OP_B
-    ->  delay_op_out = delay_op_fu else
-
+    ->  delay_op_out = fu_out          if delay_pe_op_mux_sel == D_PE_RES
+    ->  delay_op_out = op_a            if delay_pe_op_mux_sel == D_PE_OP_A
+    ->  delay_op_out = op_b            if delay_pe_op_mux_sel == D_PE_OP_B
+    ->  delay_op_out = delay_op_fwd    if delay_pe_op_mux_sel == D_DELAY_OP
+    ->  delay_op_out = delay_op_pe_in  if delay_pe_op_mux_sel == D_PE_INPUT
+    ->  delay_op_out = '0              else
   */
   always_comb begin
-    delay_op_out = (delay_pe_op_mux_sel == D_PE_RES) ?  fu_out : (
-                   (delay_pe_op_mux_sel == D_PE_OP_A) ? op_a : (
-                   (delay_pe_op_mux_sel == D_PE_OP_B) ? op_b : delay_op_fu
-                  ));
+    case (delay_pe_op_mux_sel)
+      D_PE_RES:   delay_op_out = fu_out;
+      D_PE_OP_A:  delay_op_out = op_a;
+      D_PE_OP_B:  delay_op_out = op_b;
+      D_DELAY_OP: delay_op_out = delay_op_fwd;
+      D_PE_INPUT: delay_op_out = delay_op_pe_in;
+      default:    delay_op_out = '0;
+    endcase
   end
 
-
   /*
-    Delay-operand register (also for related valid signal):
-      -> double register to delay operand by the right amount
-        -> 1 cycle for 1-cycle instructions
-        -> 2 cycle for 2-cycle instructions
+    Delay-operand pipeline:
+      -> 1 to 4 cycles configurable delay depth
   */
   always_ff @(posedge clk_cg, negedge rst_n_i) begin
     if (!rst_n_i) begin
-      delay_op_out_d1 <= '0;
-      //delay_op_out_d2 <= '0;
+      delay_pipe <= '0;
     end else begin
-      delay_op_out_d1 <= delay_op_out;
-      //delay_op_out_d2 <= delay_op_out_d1;
+      delay_pipe[0] <= delay_op_out;
+      delay_pipe[1] <= delay_pipe[0];
+      delay_pipe[2] <= delay_pipe[1];
+      delay_pipe[3] <= delay_pipe[2];
     end
   end
 
-  /* 
-    Delay Operand Output Mux:
-
-      -> if delay_pe_op_mux_sel is D_PE_RES:
-        -> in case of multi-operand (2-cycle) instructions:
-          -> delay_op_o is made up of the MSB of "_d2" operand (one of the input delay-operands) and the rest is taken from "_d1" operand
-              This because we want to forward the output of the FU directly and not an input
-        -> else:
-            ->the "_d1" signals are selected
-
-      
-      -> if delay_pe_op_mux_sel is NOT D_PE_RES:
-        -> in case of multi-operand (2-cycle) instructions:
-            ->the "_d2" signals are selected
-        -> else:
-            ->the "_d1" signals are selected
-  */
   always_comb begin
-    /* if (delay_pe_op_mux_sel == D_PE_RES) begin
-      if (multi_op_instr) begin
-        delay_op_o = {delay_op_out_d2[N_BITS], delay_op_out_d1[N_BITS-1:0]};
-      end else begin
-        delay_op_o = delay_op_out_d1;
-      end
-    end else begin
-      if (multi_op_instr) begin
-        delay_op_o = delay_op_out_d2;
-      end else begin */
-        delay_op_o = delay_op_out_d1;
-      /* end
-    end */
+    case (delay_depth)
+      2'b00:   delay_op_o = delay_pipe[0];  // 1-cycle delay
+      2'b01:   delay_op_o = delay_pipe[1];  // 2-cycle delay
+      2'b10:   delay_op_o = delay_pipe[2];  // 3-cycle delay
+      2'b11:   delay_op_o = delay_pipe[3];  // 4-cycle delay
+      default: delay_op_o = delay_pipe[0];
+    endcase
   end
 %endif
 

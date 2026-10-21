@@ -298,29 +298,38 @@ logic out_delay_op_valid${r}${c};
 %endif
 
 %if dae_cgra == 1:
+<%
+neigh_offsets = {
+    "NW": (-1, -1),
+    "UP": (-1,  0),
+    "NE": (-1, +1),
+    "LEFT": (0, -1),
+    "RIGHT": (0, +1),
+    "SW": (+1, -1),
+    "DOWN": (+1,  0),
+    "SE": (+1, +1),
+}
+%>
   ////////////////////////////////
   //  DAE: PE I/Os assignments  //
   ////////////////////////////////
   %for r in range(n_pea_rows):
     %for c in range(n_pea_cols):
-  assign in_data_pe${r}${c}[CONSTANT] = reg_constant_op_i[${r}][${c}]; <% k = 1 %> <% pe = 0 %>
+  assign in_data_pe${r}${c}[CONSTANT] = reg_constant_op_i[${r}][${c}];
         %for i in range(len(pea_in_mem_placement[r])):
           %if pea_in_mem_placement[r][i] == "None":
-  assign in_data_pe${r}${c}[MEM_IN_${i}] = '0; <% k = k + 1 %>
+  assign in_data_pe${r}${c}[MEM_IN_${i}] = '0;
           %else:
-  assign in_data_pe${r}${c}[MEM_IN_${i}] = in_data_pea[${pea_in_mem_placement[r][i]}]; <% k = k + 1 %>      
+  assign in_data_pe${r}${c}[MEM_IN_${i}] = in_data_pea[${pea_in_mem_placement[r][i]}];      
           %endif
         %endfor    
-      %for r1 in range(r-1,r+2,1):
-        %for c1 in range(c-1,c+2,1):
-          %if (r1 == r or c1 == c) and (not(r1 == r and c1 == c)): #this defines noc
-            %if r1 < 0 or c1 < 0 or r1 >= n_pea_rows or c1 >= n_pea_cols:
-  assign in_data_pe${r}${c}[${pattern_neigh_pe[pe]}] = '0; <% k = k + 1 %> <% pe = pe + 1 %>
-            %else:
-  assign in_data_pe${r}${c}[${pattern_neigh_pe[pe]}] = out_data_pe${r1}${c1}; <% k = k + 1 %> <% pe = pe + 1 %>
-            %endif
-          %endif
-        %endfor
+      %for neigh in pattern_neigh_pe:
+        <% dr, dc = neigh_offsets[neigh] %>
+        %if (r + dr) < 0 or (c + dc) < 0 or (r + dr) >= n_pea_rows or (c + dc) >= n_pea_cols:
+  assign in_data_pe${r}${c}[${neigh}] = '0;
+        %else:
+  assign in_data_pe${r}${c}[${neigh}] = out_data_pe${r+dr}${c+dc};
+        %endif
       %endfor
   // SELF is not fed through the operand mux (self-loopback is wired directly to the FU); tie explicitly to avoid an undriven slot
   assign in_data_pe${r}${c}[SELF] = '0;
@@ -392,21 +401,16 @@ logic out_delay_op_valid${r}${c};
   ////////////////////////////////////
   //     DAE: Delay Ops assignments //
   ////////////////////////////////////
-  <% k = 0 %>
   %for r in range(n_pea_rows):
     %for c in range(n_pea_cols):
-      %for r1 in range(r-1,r+2,1):
-        %for c1 in range(c-1,c+2,1):
-          %if (r1 == r or c1 == c) and (not(r1 == r and c1 == c)): #this defines noc
-            %if r1 < 0 or c1 < 0 or r1 >= n_pea_rows or c1 >= n_pea_cols:
-  assign in_delay_op${r}${c}[${k}] = '0; <% k = k + 1 %>
-            %else:
-  assign in_delay_op${r}${c}[${k}] = out_delay_op${r1}${c1}; <% k = k + 1 %>
-            %endif
-          %endif
-        %endfor
+      %for idx, neigh in enumerate(pattern_neigh_pe):
+        <% dr, dc = neigh_offsets[neigh] %>
+        %if (r + dr) < 0 or (c + dc) < 0 or (r + dr) >= n_pea_rows or (c + dc) >= n_pea_cols:
+  assign in_delay_op${r}${c}[${idx}] = '0;
+        %else:
+  assign in_delay_op${r}${c}[${idx}] = out_delay_op${r+dr}${c+dc};
+        %endif
       %endfor
-    <% k = 0 %>
     %endfor
   %endfor
 %endif

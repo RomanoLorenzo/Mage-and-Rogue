@@ -42,19 +42,52 @@ void write_mage_register(uint32_t p_val, uintptr_t p_addr, uint32_t p_mask, uint
 #define MAGE_PE_OP_MULH  0x0DU
 
 #define MAGE_PE_MUX_CONST      0x0U
-#define MAGE_PE_MUX_MEM_IN_0   0x1U
-#define MAGE_PE_MUX_MEM_IN_1   0x2U
-#define MAGE_PE_MUX_MEM_IN_2   0x3U
-#define MAGE_PE_MUX_MEM_IN_3   0x4U
-#define MAGE_PE_MUX_MEM_IN_4   0x5U
-#define MAGE_PE_MUX_UP         0x6U
-#define MAGE_PE_MUX_LEFT       0x7U
-#define MAGE_PE_MUX_RIGHT      0x8U
-#define MAGE_PE_MUX_DOWN       0x9U
-#define MAGE_PE_MUX_SELF       0xAU
+%for i in range(n_pe_in_mem):
+#define MAGE_PE_MUX_MEM_IN_${i}   ${hex(i+1)}U
+%endfor
+<% idx = n_pe_in_mem + 1 %>
+%for neigh in pattern_neigh_pe:
+#define MAGE_PE_MUX_${neigh}   ${hex(idx)}U
+<% idx += 1 %>
+%endfor
+#define MAGE_PE_MUX_SELF       ${hex(idx)}U
+<% idx += 1 %>
+#define MAGE_PE_MUX_DELAY_OP   ${hex(idx)}U
 
 #define MAGE_BUILD_PE_CFG(op, mux_a, mux_b) \
   (((uint32_t)(op) << 8) | ((uint32_t)(mux_b) << 4) | ((uint32_t)(mux_a) << 0))
+
+// Delay unit selection modes
+#define MAGE_D_PE_OP_NONE  0x0U
+#define MAGE_D_PE_RES      0x1U
+#define MAGE_D_PE_OP_A     0x2U
+#define MAGE_D_PE_OP_B     0x3U
+#define MAGE_D_DELAY_OP    0x4U
+#define MAGE_D_PE_INPUT    0x5U
+
+// Delay pipeline depth
+#define MAGE_DELAY_DEPTH_1 0x0U
+#define MAGE_DELAY_DEPTH_2 0x1U
+#define MAGE_DELAY_DEPTH_3 0x2U
+#define MAGE_DELAY_DEPTH_4 0x3U
+
+// Delay neighbour selectors
+%for i, neigh in enumerate(pattern_neigh_pe):
+#define MAGE_D_${neigh}    ${hex(i)}U
+%endfor
+
+/**
+ * @brief Enhanced builder macro for PE configuration with decoupled delay channels and depth.
+ */
+#define MAGE_BUILD_PE_CFG_EXT(op, mux_a, mux_b, d_fu, d_op, d_fwd, d_in_pe, depth) \
+  (((uint32_t)(mux_a) & 0xFU) | \
+   (((uint32_t)(mux_b) & 0xFU) << 4) | \
+   (((uint32_t)(op) & 0x1FU) << 8) | \
+   (((uint32_t)(d_fu) & 0x7U) << 13) | \
+   (((uint32_t)(d_op) & 0x7U) << 16) | \
+   (((uint32_t)(d_fwd) & 0x7U) << 19) | \
+   (((uint32_t)(d_in_pe) & 0xFU) << 22) | \
+   (((uint32_t)(depth) & 0x3U) << 26))
 
 
 

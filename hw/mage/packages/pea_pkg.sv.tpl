@@ -7,7 +7,14 @@
 // Date: 26/02/2025
 // Description: Package for CGRA's Processing Element Array
 
-<%import math as m%>
+<%import math as m
+log_n_neigh = 1 if n_neigh_pe == 1 else m.ceil(m.log2(n_neigh_pe))
+if dae_cgra == 1:
+  n_inputs_pe = n_neigh_pe + n_pe_in_mem + 3
+else:
+  n_inputs_pe = n_pe_in_stream + n_neigh_pe + 4
+log_n_inputs_pe = 1 if n_inputs_pe == 1 else m.ceil(m.log2(n_inputs_pe))
+%>
 
 package pea_pkg;
 
@@ -114,12 +121,24 @@ package pea_pkg;
     localparam unsigned DELAY_PE_SEL_LSB    = VEC_MODE_SEL_MSB + 1;
     localparam unsigned DELAY_PE_SEL_MSB    = DELAY_PE_SEL_LSB + $clog2(N_NEIGH_PE) - 1;
     localparam unsigned DELAY_PE_OP_SEL_LSB = DELAY_PE_SEL_MSB + 1;
-    localparam unsigned DELAY_PE_OP_SEL_MSB = DELAY_PE_OP_SEL_LSB + 2 - 1;
+    localparam unsigned DELAY_PE_OP_SEL_MSB = DELAY_PE_OP_SEL_LSB + 3 - 1;
+    localparam unsigned DELAY_FWD_SEL_LSB   = DELAY_PE_OP_SEL_MSB + 1;
+    localparam unsigned DELAY_FWD_SEL_MSB   = DELAY_FWD_SEL_LSB + $clog2(N_NEIGH_PE) - 1;
+    localparam unsigned DELAY_IN_PE_SEL_LSB = DELAY_FWD_SEL_MSB + 1;
+    localparam unsigned DELAY_IN_PE_SEL_MSB = DELAY_IN_PE_SEL_LSB + LOG_N_INPUTS_PE - 1;
+    localparam unsigned DELAY_DEPTH_LSB     = DELAY_IN_PE_SEL_MSB + 1;
+    localparam unsigned DELAY_DEPTH_MSB     = DELAY_DEPTH_LSB + 2 - 1;
     %elif dae_cgra == 1:
     localparam unsigned DELAY_PE_SEL_LSB    = INSTR_SEL_MSB + 1;
     localparam unsigned DELAY_PE_SEL_MSB    = DELAY_PE_SEL_LSB + $clog2(N_NEIGH_PE) - 1;
     localparam unsigned DELAY_PE_OP_SEL_LSB = DELAY_PE_SEL_MSB + 1;
-    localparam unsigned DELAY_PE_OP_SEL_MSB = DELAY_PE_OP_SEL_LSB + 2 - 1;
+    localparam unsigned DELAY_PE_OP_SEL_MSB = DELAY_PE_OP_SEL_LSB + 3 - 1;
+    localparam unsigned DELAY_FWD_SEL_LSB   = DELAY_PE_OP_SEL_MSB + 1;
+    localparam unsigned DELAY_FWD_SEL_MSB   = DELAY_FWD_SEL_LSB + $clog2(N_NEIGH_PE) - 1;
+    localparam unsigned DELAY_IN_PE_SEL_LSB = DELAY_FWD_SEL_MSB + 1;
+    localparam unsigned DELAY_IN_PE_SEL_MSB = DELAY_IN_PE_SEL_LSB + LOG_N_INPUTS_PE - 1;
+    localparam unsigned DELAY_DEPTH_LSB     = DELAY_IN_PE_SEL_MSB + 1;
+    localparam unsigned DELAY_DEPTH_MSB     = DELAY_DEPTH_LSB + 2 - 1;
     %endif
   %endif
 
@@ -222,32 +241,33 @@ package pea_pkg;
     DELAY_OP   = 4'b${'{:04b}'.format(n_pe_in_stream+7)}
   %endif
 %elif dae_cgra == 1:
-    CONSTANT   = 4'b0000,
+<% idx = 0 %>
+    CONSTANT   = ${log_n_inputs_pe}'d${idx}, <% idx += 1 %>
   %for i in range(n_pe_in_mem):
-    MEM_IN_${i} = 4'b${'{:04b}'.format(i+1)},
+    MEM_IN_${i} = ${log_n_inputs_pe}'d${idx}, <% idx += 1 %>
   %endfor
-    UP         = 4'b${'{:04b}'.format(n_pe_in_mem+1)},
-    LEFT       = 4'b${'{:04b}'.format(n_pe_in_mem+2)},
-    RIGHT      = 4'b${'{:04b}'.format(n_pe_in_mem+3)},
-    DOWN       = 4'b${'{:04b}'.format(n_pe_in_mem+4)},
-    SELF       = 4'b${'{:04b}'.format(n_pe_in_mem+5)},
-    DELAY_OP   = 4'b${'{:04b}'.format(n_pe_in_mem+6)}
+  %for neigh in pattern_neigh_pe:
+    ${neigh} = ${log_n_inputs_pe}'d${idx}, <% idx += 1 %>
+  %endfor
+    SELF       = ${log_n_inputs_pe}'d${idx}, <% idx += 1 %>
+    DELAY_OP   = ${log_n_inputs_pe}'d${idx}
 %endif
   }pe_mux_sel_t;
 
 %if has_delay_pe:
   typedef enum logic [$clog2(N_NEIGH_PE)-1:0] {
-    D_UP      = 2'b00,
-    D_LEFT    = 2'b01,
-    D_RIGHT   = 2'b10,
-    D_DOWN    = 2'b11
+  %for i, neigh in enumerate(pattern_neigh_pe):
+    D_${neigh} = ${log_n_neigh}'d${i}${',' if i < len(pattern_neigh_pe)-1 else ''}
+  %endfor
   } delay_pe_mux_sel_t;
 
-  typedef enum logic [1:0] {
-    D_PE_OP_NONE  = 2'b00,
-    D_PE_RES      = 2'b01,
-    D_PE_OP_A     = 2'b10,
-    D_PE_OP_B     = 2'b11
+  typedef enum logic [2:0] {
+    D_PE_OP_NONE = 3'b000,
+    D_PE_RES     = 3'b001,
+    D_PE_OP_A    = 3'b010,
+    D_PE_OP_B    = 3'b011,
+    D_DELAY_OP   = 3'b100,
+    D_PE_INPUT   = 3'b101
   } delay_pe_op_mux_sel_t;
 %endif
 

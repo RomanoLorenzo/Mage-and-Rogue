@@ -24,8 +24,8 @@
         kernel_len : 1,
         n_pea_rows: 4,
         n_pea_cols: 2,
-        n_neigh_pe: 4,
-        pattern_neigh_pe: ["UP", "LEFT", "RIGHT", "DOWN"],
+        n_neigh_pe: 8,
+        pattern_neigh_pe: ["UP", "LEFT", "RIGHT", "DOWN", "NW", "NE", "SE", "SW"],
     },
 
     dae_params: {
