@@ -49,9 +49,19 @@ extern "C"
 #define MAGE_PKE_START_ADDR (MAGE_PERIPH_START_ADDRESS + MAGE_PKE_REG_OFFSET)
 #define MAGE_PEA_CONTROL_SNT_ADDR (MAGE_PERIPH_START_ADDRESS + MAGE_PEA_CONTROL_SNT_REG_OFFSET)
 %endif
+<%
+import math as m
+load_age_sel_count = int(m.ceil(((n_age_tot*m.log2(max(n_age_per_stream,4)))*kernel_len)/32))
+acc_hwlp_sel_count = int(m.ceil(n_age_tot/8))
+%>
 #define MAGE_SEL_OUT_PEA_START_ADDR (MAGE_PERIPH_START_ADDRESS + MAGE_OUT_PEA_SEL_REG_OFFSET)
+%if load_age_sel_count == 1:
+#define MAGE_LOAD_AGE_SEL_ADDR (MAGE_PERIPH_START_ADDRESS + MAGE_LOAD_AGE_SEL_REG_OFFSET)
+#define MAGE_PEA_DMEM_SEL_ADDR (MAGE_PERIPH_START_ADDRESS + MAGE_PEA_DMEM_SEL_REG_OFFSET)
+%else:
 #define MAGE_LOAD_AGE_SEL_ADDR (MAGE_PERIPH_START_ADDRESS + MAGE_LOAD_AGE_SEL_0_REG_OFFSET)
 #define MAGE_PEA_DMEM_SEL_ADDR (MAGE_PERIPH_START_ADDRESS + MAGE_PEA_DMEM_SEL_0_REG_OFFSET)
+%endif
 #define MAGE_CFG_START_ADDR (MAGE_PERIPH_START_ADDRESS + MAGE_CFG_MAGE_AGE_0_REG_OFFSET)
 #define MAGE_MAGE_CFG_START_ADDR (MAGE_PERIPH_START_ADDRESS + MAGE_CFG_MAGE_AGE_0_REG_OFFSET)
 
@@ -74,22 +84,29 @@ extern "C"
 #define REG_STRIDE_MODE(i)    (*(volatile uint32_t *)(MAGE_CTRL_BASE + MAGE_STRIDE_MODE_0_REG_OFFSET + ((uintptr_t)(i) * 4U)))
 
 #define REG_ACC_HWLP_SEL_0    (*(volatile uint32_t *)(MAGE_CTRL_BASE + MAGE_ACC_HWLP_SEL_0_REG_OFFSET))
-%if n_streams >= 2:
+%if acc_hwlp_sel_count >= 2:
 #define REG_ACC_HWLP_SEL_1    (*(volatile uint32_t *)(MAGE_CTRL_BASE + MAGE_ACC_HWLP_SEL_1_REG_OFFSET))
 %endif
-%if n_streams >= 3:
+%if acc_hwlp_sel_count >= 3:
 #define REG_ACC_HWLP_SEL_2    (*(volatile uint32_t *)(MAGE_CTRL_BASE + MAGE_ACC_HWLP_SEL_2_REG_OFFSET))
 %endif
 
 #define REG_CFG_PE(r, c)      (*(volatile uint32_t *)(MAGE_CTRL_BASE + MAGE_CFG_PE_00_REG_OFFSET + (((uintptr_t)(r) * ${n_pea_cols}U) + (uintptr_t)(c)) * 4U))
 
 #define REG_OUT_PEA_SEL       (*(volatile uint32_t *)(MAGE_CTRL_BASE + MAGE_OUT_PEA_SEL_REG_OFFSET))
+%if load_age_sel_count == 1:
+#define REG_LOAD_AGE_SEL(i)   (*(volatile uint32_t *)(MAGE_CTRL_BASE + MAGE_LOAD_AGE_SEL_REG_OFFSET + ((uintptr_t)(i) * 4U)))
+#define REG_LOAD_AGE_SEL_0    REG_LOAD_AGE_SEL(0)
+#define REG_PEA_DMEM_SEL(i)   (*(volatile uint32_t *)(MAGE_CTRL_BASE + MAGE_PEA_DMEM_SEL_REG_OFFSET + ((uintptr_t)(i) * 4U)))
+#define REG_PEA_DMEM_SEL_0    REG_PEA_DMEM_SEL(0)
+%else:
 #define REG_LOAD_AGE_SEL(i)   (*(volatile uint32_t *)(MAGE_CTRL_BASE + MAGE_LOAD_AGE_SEL_0_REG_OFFSET + ((uintptr_t)(i) * 4U)))
 #define REG_LOAD_AGE_SEL_0    REG_LOAD_AGE_SEL(0)
 #define REG_LOAD_AGE_SEL_1    REG_LOAD_AGE_SEL(1)
 #define REG_PEA_DMEM_SEL(i)   (*(volatile uint32_t *)(MAGE_CTRL_BASE + MAGE_PEA_DMEM_SEL_0_REG_OFFSET + ((uintptr_t)(i) * 4U)))
 #define REG_PEA_DMEM_SEL_0    REG_PEA_DMEM_SEL(0)
 #define REG_PEA_DMEM_SEL_1    REG_PEA_DMEM_SEL(1)
+%endif
 
 #define REG_CFG_MAGE_AGE(i)   (*(volatile uint32_t *)(MAGE_CTRL_BASE + MAGE_CFG_MAGE_AGE_0_REG_OFFSET + ((uintptr_t)(i) * 4U)))
 
