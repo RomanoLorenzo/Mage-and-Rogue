@@ -14,7 +14,8 @@ module dmem_decoder
     input                                               clk_i,
     input                                               rst_n_i,
     input  state_t                                      state_i,
-    input  logic   [1:0]                                reg_block_size_i,
+    input  logic   [2:0]                                reg_block_size_i,
+    input  logic   [N_STREAMS-1:0]                      reg_stream_xor_mode_i,
     /* CGRA to internal SpM */
     input  logic   [N_BANKS-1:0]                        agu_dmem_req_i,
     input  logic   [N_BANKS-1:0]                        agu_dmem_we_i,
@@ -65,163 +66,75 @@ addr_lrs_width = max(bank_msb + 1, 17)
 
   assign addr_lrs_2 = ext_dmem_addr_i[${addr_lrs_width+1}:2];
 
-  always_comb begin
+  logic [${bank_bits-1}:0] bank_idx_raw;
+  assign bank_idx_raw = addr_lrs_2[${bank_msb}:${bank_lsb}];
 
+%for s, b_cnt in enumerate(n_age_per_stream_ds):
+  <%
+    b_s = 0 if b_cnt == 1 else int(m.log2(b_cnt))
+    k_s = sum(n_age_per_stream_ds[:s])
+  %>
+  %if b_cnt == 1:
+  logic stream_${s}_sel;
+  assign stream_${s}_sel = (bank_idx_raw == ${bank_bits}'d${k_s});
+  %else:
+  logic stream_${s}_sel;
+  logic [${b_s - 1}:0] stream_${s}_rel_bank;
+  logic [${b_s + word_bits - 1}:0] stream_${s}_waddr;
+  logic [${word_bits - 1}:0] stream_${s}_ba_interleaved;
+  logic [${b_s - 1}:0] stream_${s}_bi_interleaved;
+  logic [${b_s - 1}:0] stream_${s}_bi_xor;
+  logic [${b_s - 1}:0] stream_${s}_bi_sel;
+  logic [${word_bits - 1}:0] stream_${s}_ba_sel;
+  logic stream_${s}_sn;
+
+  assign stream_${s}_sel = (bank_idx_raw >= ${bank_bits}'d${k_s} && bank_idx_raw <= ${bank_bits}'d${k_s + b_cnt - 1});
+  assign stream_${s}_rel_bank = bank_idx_raw - ${bank_bits}'d${k_s};
+  assign stream_${s}_waddr = { stream_${s}_rel_bank, addr_lrs_2[${word_bits - 1}:0] };
+  assign stream_${s}_ba_interleaved = stream_${s}_waddr[${b_s + word_bits - 1}:${b_s}];
+  assign stream_${s}_bi_interleaved = stream_${s}_waddr[${b_s - 1}:0];
+  assign stream_${s}_sn = ^stream_${s}_ba_interleaved;
+  assign stream_${s}_bi_xor = stream_${s}_bi_interleaved ^ (stream_${s}_sn << ${b_s - 1});
+
+  assign stream_${s}_bi_sel = (reg_block_size_i[2] && reg_stream_xor_mode_i[${s}]) ? stream_${s}_bi_xor : stream_${s}_bi_interleaved;
+  assign stream_${s}_ba_sel = stream_${s}_ba_interleaved;
+  %endif
+%endfor
+
+  always_comb begin
     active_banks = '0;
     addr_to_bank = '0;
 
-    case (reg_block_size_i)
-      2'b00: begin
-        addr_to_bank = addr_lrs_2[$clog2(BANK_SIZE)-1:0];
+    if (reg_block_size_i[1:0] == 2'b00) begin
+      addr_to_bank = addr_lrs_2[$clog2(BANK_SIZE)-1:0];
 %for i in range(n_age_tot):
-        active_banks[${i}] = (addr_lrs_2[${bank_msb}:${bank_lsb}] == ${i}) ? 1'b1 : 1'b0;
-%endfor 
+      active_banks[${i}] = (bank_idx_raw == ${bank_bits}'d${i}) ? 1'b1 : 1'b0;
+%endfor
+    end else begin
+%for s, b_cnt in enumerate(n_age_per_stream_ds):
+  <%
+    b_s = 0 if b_cnt == 1 else int(m.log2(b_cnt))
+    k_s = sum(n_age_per_stream_ds[:s])
+  %>
+  %if b_cnt == 1:
+      if (stream_${s}_sel) begin
+        addr_to_bank = addr_lrs_2[$clog2(BANK_SIZE)-1:0];
+        active_banks[${k_s}] = 1'b1;
       end
-
-      2'b01: begin <%k = 0%>
-        addr_to_bank = addr_lrs_2[$clog2(BANK_SIZE)-1:0] >> 1;
-%for i in range(len(n_age_per_stream_ds)):
-  %if n_age_per_stream_ds[i] == 1:
-    %if num_words == 1024:
-          active_banks[${k}] = ((addr_lrs_2[13:10] == ${k}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0; <%k = k + 1%>
-    %elif num_words == 2048:
-          active_banks[${k}] = ((addr_lrs_2[14:11] == ${k}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0; <%k = k + 1%>
-    %elif num_words == 4096:
-          active_banks[${k}] = ((addr_lrs_2[15:12] == ${k}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0; <%k = k + 1%>
-    %elif num_words == 8192:
-          active_banks[${k}] = ((addr_lrs_2[16:13] == ${k}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0; <%k = k + 1%>
-    %elif num_words == 512:
-          active_banks[${k}] = ((addr_lrs_2[12:9] == ${k}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0; <%k = k + 1%>
-    %endif
-  %elif n_age_per_stream_ds[i] == 2:
-    %if num_words == 1024:
-          active_banks[${k}] = ((addr_lrs_2[13:10] == ${k} || addr_lrs_2[13:10] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;<%k = k + 1%>
-          active_banks[${k}] = ((addr_lrs_2[13:10] == ${k} || addr_lrs_2[13:10] == ${k-1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;  <%k = k + 1%>
-    %elif num_words == 2048:
-          active_banks[${k}] = ((addr_lrs_2[14:11] == ${k} || addr_lrs_2[14:11] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;<%k = k + 1%>
-          active_banks[${k}] = ((addr_lrs_2[14:11] == ${k} || addr_lrs_2[14:11] == ${k-1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;  <%k = k + 1%>
-    %elif num_words == 4096:
-          active_banks[${k}] = ((addr_lrs_2[15:12] == ${k} || addr_lrs_2[15:12] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;<%k = k + 1%>
-          active_banks[${k}] = ((addr_lrs_2[15:12] == ${k} || addr_lrs_2[15:12] == ${k-1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;  <%k = k + 1%>
-    %elif num_words == 8192:
-          active_banks[${k}] = ((addr_lrs_2[16:13] == ${k} || addr_lrs_2[16:13] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;<%k = k + 1%>
-          active_banks[${k}] = ((addr_lrs_2[16:13] == ${k} || addr_lrs_2[16:13] == ${k-1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;  <%k = k + 1%>
-    %elif num_words == 512:
-          active_banks[${k}] = ((addr_lrs_2[12:9] == ${k} || addr_lrs_2[12:9] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;<%k = k + 1%>
-          active_banks[${k}] = ((addr_lrs_2[12:9] == ${k} || addr_lrs_2[12:9] == ${k-1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;  <%k = k + 1%>
-    %endif
-  %elif n_age_per_stream_ds[i] == 4:
-      %if num_words == 1024:
-        active_banks[${k}] = ((addr_lrs_2[13:10] == ${k} || addr_lrs_2[13:10] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;
-        active_banks[${k+1}] = ((addr_lrs_2[13:10] == ${k} || addr_lrs_2[13:10] == ${k+1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;
-        active_banks[${k+2}] = ((addr_lrs_2[13:10] == ${k+2} || addr_lrs_2[13:10] == ${k+3}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;
-        active_banks[${k+3}] = ((addr_lrs_2[13:10] == ${k+2} || addr_lrs_2[13:10] == ${k+3}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0; <%k = k + 4%>
-      %elif num_words == 2048:
-        active_banks[${k}] = ((addr_lrs_2[14:11] == ${k} || addr_lrs_2[14:11] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;
-        active_banks[${k+1}] = ((addr_lrs_2[14:11] == ${k} || addr_lrs_2[14:11] == ${k+1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;
-        active_banks[${k+2}] = ((addr_lrs_2[14:11] == ${k+2} || addr_lrs_2[14:11] == ${k+3}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;
-        active_banks[${k+3}] = ((addr_lrs_2[14:11] == ${k+2} || addr_lrs_2[14:11] == ${k+3}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0; <%k = k + 4%>
-      %elif num_words == 4096:
-        active_banks[${k}] = ((addr_lrs_2[15:12] == ${k} || addr_lrs_2[15:12] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;
-        active_banks[${k+1}] = ((addr_lrs_2[15:12] == ${k} || addr_lrs_2[15:12] == ${k+1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;
-        active_banks[${k+2}] = ((addr_lrs_2[15:12] == ${k+2} || addr_lrs_2[15:12] == ${k+3}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;
-        active_banks[${k+3}] = ((addr_lrs_2[15:12] == ${k+2} || addr_lrs_2[15:12] == ${k+3}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0; <%k = k + 4%>
-      %elif num_words == 8192:
-        active_banks[${k}] = ((addr_lrs_2[16:13] == ${k} || addr_lrs_2[16:13] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;
-        active_banks[${k+1}] = ((addr_lrs_2[16:13] == ${k} || addr_lrs_2[16:13] == ${k+1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;
-        active_banks[${k+2}] = ((addr_lrs_2[16:13] == ${k+2} || addr_lrs_2[16:13] == ${k+3}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;
-        active_banks[${k+3}] = ((addr_lrs_2[16:13] == ${k+2} || addr_lrs_2[16:13] == ${k+3}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0; <%k = k + 4%>
-      %elif num_words == 512:
-        active_banks[${k}] = ((addr_lrs_2[12:9] == ${k} || addr_lrs_2[12:9] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;
-        active_banks[${k+1}] = ((addr_lrs_2[12:9] == ${k} || addr_lrs_2[12:9] == ${k+1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;
-        active_banks[${k+2}] = ((addr_lrs_2[12:9] == ${k+2} || addr_lrs_2[12:9] == ${k+3}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;
-        active_banks[${k+3}] = ((addr_lrs_2[12:9] == ${k+2} || addr_lrs_2[12:9] == ${k+3}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0; <%k = k + 4%>
-      %endif
-  %elif n_age_per_stream_ds[i] == 8:
-    %for pair in range(4):
-        active_banks[${k}]   = ((addr_lrs_2[${bank_msb}:${bank_lsb}] == ${k} || addr_lrs_2[${bank_msb}:${bank_lsb}] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;
-        active_banks[${k+1}] = ((addr_lrs_2[${bank_msb}:${bank_lsb}] == ${k} || addr_lrs_2[${bank_msb}:${bank_lsb}] == ${k+1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0; <%k = k + 2%>
+  %else:
+      if (stream_${s}_sel) begin
+        addr_to_bank = stream_${s}_ba_sel;
+    %for j in range(b_cnt):
+      <% b_idx = k_s + j %>
+        active_banks[${b_idx}] = (stream_${s}_bi_sel == ${b_s}'d${j}) ? 1'b1 : 1'b0;
     %endfor
-  %endif
-%endfor 
       end
-
-      2'b10: begin  <%k = 0%>
-        addr_to_bank = addr_lrs_2[$clog2(BANK_SIZE)-1:0] >> 2;
-%for i in range(len(n_age_per_stream_ds)):
-  %if n_age_per_stream_ds[i] == 1:
-    %if num_words == 1024:
-          active_banks[${k}] = ((addr_lrs_2[13:10] == ${k}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0; <%k = k + 1%>
-    %elif num_words == 2048:
-          active_banks[${k}] = ((addr_lrs_2[14:11] == ${k}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0; <%k = k + 1%>
-    %elif num_words == 4096:
-          active_banks[${k}] = ((addr_lrs_2[15:12] == ${k}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0; <%k = k + 1%>
-    %elif num_words == 8192:
-          active_banks[${k}] = ((addr_lrs_2[16:13] == ${k}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0; <%k = k + 1%>
-    %elif num_words == 512:
-          active_banks[${k}] = ((addr_lrs_2[12:9] == ${k}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0; <%k = k + 1%>
-    %endif
-  %elif n_age_per_stream_ds[i] == 2:
-    %if num_words == 1024:
-          active_banks[${k}] = ((addr_lrs_2[13:10] == ${k} || addr_lrs_2[13:10] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;<%k = k + 1%>
-          active_banks[${k}] = ((addr_lrs_2[13:10] == ${k} || addr_lrs_2[13:10] == ${k-1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;  <%k = k + 1%>
-    %elif num_words == 2048:
-          active_banks[${k}] = ((addr_lrs_2[14:11] == ${k} || addr_lrs_2[14:11] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;<%k = k + 1%>
-          active_banks[${k}] = ((addr_lrs_2[14:11] == ${k} || addr_lrs_2[14:11] == ${k-1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;  <%k = k + 1%>
-    %elif num_words == 4096:
-          active_banks[${k}] = ((addr_lrs_2[15:12] == ${k} || addr_lrs_2[15:12] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0;<%k = k + 1%>
-          active_banks[${k}] = ((addr_lrs_2[15:12] == ${k} || addr_lrs_2[15:12] == ${k-1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;  <%k = k + 1%>
-    %elif num_words == 8192:
-          active_banks[${k}] = ((addr_lrs_2[16:13] == ${k} || addr_lrs_2[16:13] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0; <%k = k + 1%>
-          active_banks[${k}] = ((addr_lrs_2[16:13] == ${k} || addr_lrs_2[16:13] == ${k-1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;  <%k = k + 1%>
-    %elif num_words == 512:
-          active_banks[${k}] = ((addr_lrs_2[12:9] == ${k} || addr_lrs_2[12:9] == ${k+1}) && addr_lrs_2[0] == 1'b0) ? 1'b1 : 1'b0; <%k = k + 1%>
-          active_banks[${k}] = ((addr_lrs_2[12:9] == ${k} || addr_lrs_2[12:9] == ${k-1}) && addr_lrs_2[0] == 1'b1) ? 1'b1 : 1'b0;  <%k = k + 1%>
-    %endif
-  %elif n_age_per_stream_ds[i] == 4:
-      %if num_words == 1024:
-        active_banks[${k}] = ((addr_lrs_2[13:10] == ${k} || addr_lrs_2[13:10] == ${k+1} || addr_lrs_2[13:10] == ${k+2} || addr_lrs_2[13:10] == ${k+3}) && addr_lrs_2[1:0] == 2'b00) ? 1'b1 : 1'b0;
-        active_banks[${k+1}] = ((addr_lrs_2[13:10] == ${k} || addr_lrs_2[13:10] == ${k+1} || addr_lrs_2[13:10] == ${k+2} || addr_lrs_2[13:10] == ${k+3}) && addr_lrs_2[1:0] == 2'b01) ? 1'b1 : 1'b0;
-        active_banks[${k+2}] = ((addr_lrs_2[13:10] == ${k} || addr_lrs_2[13:10] == ${k+1} || addr_lrs_2[13:10] == ${k+2} || addr_lrs_2[13:10] == ${k+3}) && addr_lrs_2[1:0] == 2'b10) ? 1'b1 : 1'b0;
-        active_banks[${k+3}] = ((addr_lrs_2[13:10] == ${k} || addr_lrs_2[13:10] == ${k+1} || addr_lrs_2[13:10] == ${k+2} || addr_lrs_2[13:10] == ${k+3}) && addr_lrs_2[1:0] == 2'b11) ? 1'b1 : 1'b0; <%k = k + 4%>
-      %elif num_words == 2048:
-        active_banks[${k}] = ((addr_lrs_2[14:11] == ${k} || addr_lrs_2[14:11] == ${k+1} || addr_lrs_2[14:11] == ${k+2} || addr_lrs_2[14:11] == ${k+3}) && addr_lrs_2[1:0] == 2'b00) ? 1'b1 : 1'b0;
-        active_banks[${k+1}] = ((addr_lrs_2[14:11] == ${k} || addr_lrs_2[14:11] == ${k+1} || addr_lrs_2[14:11] == ${k+2} || addr_lrs_2[14:11] == ${k+3}) && addr_lrs_2[1:0] == 2'b01) ? 1'b1 : 1'b0;
-        active_banks[${k+2}] = ((addr_lrs_2[14:11] == ${k} || addr_lrs_2[14:11] == ${k+1} || addr_lrs_2[14:11] == ${k+2} || addr_lrs_2[14:11] == ${k+3}) && addr_lrs_2[1:0] == 2'b10) ? 1'b1 : 1'b0;
-        active_banks[${k+3}] = ((addr_lrs_2[14:11] == ${k} || addr_lrs_2[14:11] == ${k+1} || addr_lrs_2[14:11] == ${k+2} || addr_lrs_2[14:11] == ${k+3}) && addr_lrs_2[1:0] == 2'b11) ? 1'b1 : 1'b0; <%k = k + 4%>
-      %elif num_words == 4096:
-        active_banks[${k}] = ((addr_lrs_2[15:12] == ${k} || addr_lrs_2[15:12] == ${k+1} || addr_lrs_2[15:12] == ${k+2} || addr_lrs_2[15:12] == ${k+3}) && addr_lrs_2[1:0] == 2'b00) ? 1'b1 : 1'b0;
-        active_banks[${k+1}] = ((addr_lrs_2[15:12] == ${k} || addr_lrs_2[15:12] == ${k+1} || addr_lrs_2[15:12] == ${k+2} || addr_lrs_2[15:12] == ${k+3}) && addr_lrs_2[1:0] == 2'b01) ? 1'b1 : 1'b0;
-        active_banks[${k+2}] = ((addr_lrs_2[15:12] == ${k} || addr_lrs_2[15:12] == ${k+1} || addr_lrs_2[15:12] == ${k+2} || addr_lrs_2[15:12] == ${k+3}) && addr_lrs_2[1:0] == 2'b10) ? 1'b1 : 1'b0;
-        active_banks[${k+3}] = ((addr_lrs_2[15:12] == ${k} || addr_lrs_2[15:12] == ${k+1} || addr_lrs_2[15:12] == ${k+2} || addr_lrs_2[15:12] == ${k+3}) && addr_lrs_2[1:0] == 2'b11) ? 1'b1 : 1'b0; <%k = k + 4%>
-      %elif num_words == 8192:
-        active_banks[${k}] = ((addr_lrs_2[16:13] == ${k} || addr_lrs_2[16:13] == ${k+1} || addr_lrs_2[16:13] == ${k+2} || addr_lrs_2[16:13] == ${k+3}) && addr_lrs_2[1:0] == 2'b00) ? 1'b1 : 1'b0;
-        active_banks[${k+1}] = ((addr_lrs_2[16:13] == ${k} || addr_lrs_2[16:13] == ${k+1} || addr_lrs_2[16:13] == ${k+2} || addr_lrs_2[16:13] == ${k+3}) && addr_lrs_2[1:0] == 2'b01) ? 1'b1 : 1'b0;
-        active_banks[${k+2}] = ((addr_lrs_2[16:13] == ${k} || addr_lrs_2[16:13] == ${k+1} || addr_lrs_2[16:13] == ${k+2} || addr_lrs_2[16:13] == ${k+3}) && addr_lrs_2[1:0] == 2'b10) ? 1'b1 : 1'b0;
-        active_banks[${k+3}] = ((addr_lrs_2[16:13] == ${k} || addr_lrs_2[16:13] == ${k+1} || addr_lrs_2[16:13] == ${k+2} || addr_lrs_2[16:13] == ${k+3}) && addr_lrs_2[1:0] == 2'b11) ? 1'b1 : 1'b0;<%k = k + 4%>
-      %elif num_words == 512:
-        active_banks[${k}] = ((addr_lrs_2[12:9] == ${k} || addr_lrs_2[12:9] == ${k+1} || addr_lrs_2[12:9] == ${k+2} || addr_lrs_2[12:9] == ${k+3}) && addr_lrs_2[1:0] == 2'b00) ? 1'b1 : 1'b0;
-        active_banks[${k+1}] = ((addr_lrs_2[12:9] == ${k} || addr_lrs_2[12:9] == ${k+1} || addr_lrs_2[12:9] == ${k+2} || addr_lrs_2[12:9] == ${k+3}) && addr_lrs_2[1:0] == 2'b01) ? 1'b1 : 1'b0;
-        active_banks[${k+2}] = ((addr_lrs_2[12:9] == ${k} || addr_lrs_2[12:9] == ${k+1} || addr_lrs_2[12:9] == ${k+2} || addr_lrs_2[12:9] == ${k+3}) && addr_lrs_2[1:0] == 2'b10) ? 1'b1 : 1'b0;
-        active_banks[${k+3}] = ((addr_lrs_2[12:9] == ${k} || addr_lrs_2[12:9] == ${k+1} || addr_lrs_2[12:9] == ${k+2} || addr_lrs_2[12:9] == ${k+3}) && addr_lrs_2[1:0] == 2'b11) ? 1'b1 : 1'b0;<%k = k + 4%>
   %endif
-  %elif n_age_per_stream_ds[i] == 8:
-    %for quad in range(2):
-        active_banks[${k}]   = ((addr_lrs_2[${bank_msb}:${bank_lsb}] >= ${k} && addr_lrs_2[${bank_msb}:${bank_lsb}] <= ${k+3}) && addr_lrs_2[1:0] == 2'b00) ? 1'b1 : 1'b0;
-        active_banks[${k+1}] = ((addr_lrs_2[${bank_msb}:${bank_lsb}] >= ${k} && addr_lrs_2[${bank_msb}:${bank_lsb}] <= ${k+3}) && addr_lrs_2[1:0] == 2'b01) ? 1'b1 : 1'b0;
-        active_banks[${k+2}] = ((addr_lrs_2[${bank_msb}:${bank_lsb}] >= ${k} && addr_lrs_2[${bank_msb}:${bank_lsb}] <= ${k+3}) && addr_lrs_2[1:0] == 2'b10) ? 1'b1 : 1'b0;
-        active_banks[${k+3}] = ((addr_lrs_2[${bank_msb}:${bank_lsb}] >= ${k} && addr_lrs_2[${bank_msb}:${bank_lsb}] <= ${k+3}) && addr_lrs_2[1:0] == 2'b11) ? 1'b1 : 1'b0; <%k = k + 4%>
-    %endfor
-  %endif
-%endfor 
-      end
-
-      default: active_banks = '0;
-    endcase
-
+%endfor
+    end
   end
 
-  always_comb begin
+    always_comb begin
     is_dmem_address = (ext_dmem_addr_i[32-1:32-4] == 4'b1111) ? 1'b1 : 1'b0;
 
     if (is_dmem_address == 1'b1) begin

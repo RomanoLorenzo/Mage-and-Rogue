@@ -36,7 +36,8 @@ module mage_top
     //                   DAE CGRA Configuration                   //
     ////////////////////////////////////////////////////////////////
     output state_t                                        state_o,
-    output logic [1:0]                                    reg_block_size_o,
+    output logic [2:0]                                    reg_block_size_o,
+    output logic [N_STREAMS-1:0]                          reg_stream_xor_mode_o,
     /* Interface towards internal SpM */
     output logic     [N_BANKS-1:0]                        dmem_req_o,
     output logic     [N_BANKS-1:0]                        dmem_we_o,
@@ -51,6 +52,7 @@ module mage_top
 %if dae_cgra == 1:
   logic reg_start;
   logic [N_STREAMS-1:0] reg_stream_xor_mode;
+  assign reg_stream_xor_mode_o = reg_stream_xor_mode;
   ////////////////////////////////////////////////////////////////
   //                   General Configuration                    //
   ////////////////////////////////////////////////////////////////

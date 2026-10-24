@@ -149,7 +149,24 @@ void mage_set_acc_mode(uint32_t mode){
  */
 void mage_set_address_map_blocksize(uint32_t blocksize){
   volatile uint32_t *mage_block_size = (volatile uint32_t *)(MAGE_BLOCK_SIZE_START_ADDR);
-  *mage_block_size = blocksize & 0x3;
+  *mage_block_size = blocksize & 0x7;
+}
+
+
+/**
+ * @brief Sets CPU XOR-like interleaving access mode for Mage SpM.
+ * 
+ * @param enable 1 to enable CPU XOR-like mode, 0 to disable.
+ */
+void mage_set_cpu_xor_mode(uint32_t enable){
+  volatile uint32_t *mage_block_size = (volatile uint32_t *)(MAGE_BLOCK_SIZE_START_ADDR);
+  uint32_t val = *mage_block_size;
+  if (enable) {
+    val |= (1U << 2);
+  } else {
+    val &= ~(1U << 2);
+  }
+  *mage_block_size = val;
 }
 
 

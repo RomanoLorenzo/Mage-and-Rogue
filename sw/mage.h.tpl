@@ -176,6 +176,13 @@ void mage_set_acc_mode(uint32_t mode);
 void mage_set_address_map_blocksize(uint32_t blocksize);
 
 /**
+ * @brief Sets CPU XOR-like interleaving access mode for Mage SpM.
+ * 
+ * @param enable 1 to enable CPU XOR-like mode, 0 to disable.
+ */
+void mage_set_cpu_xor_mode(uint32_t enable);
+
+/**
  * @brief Sets the general configuration bits for Mage.
  * 
  * @param cfg_bits The configuration bits to set.

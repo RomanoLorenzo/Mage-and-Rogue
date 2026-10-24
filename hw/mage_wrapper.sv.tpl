@@ -42,7 +42,8 @@ module mage_wrapper
 %if dae_cgra == 1:
   //mage fsm state
   state_t                                                  state;
-  logic   [            1:0]                                reg_block_size;
+  logic   [            2:0]                                reg_block_size;
+  logic   [  N_STREAMS-1:0]                                reg_stream_xor_mode;
   ////////////////////////////////////////////////////////////////
   //                agu signals to Data Memory                 //
   ////////////////////////////////////////////////////////////////
@@ -86,6 +87,7 @@ module mage_wrapper
 %if dae_cgra == 1:
       .state_o(state),
       .reg_block_size_o(reg_block_size),
+      .reg_stream_xor_mode_o(reg_stream_xor_mode),
       .dmem_req_o(agu_dmem_req),
       .dmem_we_o(agu_dmem_we),
       .dmem_addr_o(agu_dmem_addr),
@@ -121,6 +123,7 @@ module mage_wrapper
       .rst_n_i,
       .state_i(state),
       .reg_block_size_i(reg_block_size),
+      .reg_stream_xor_mode_i(reg_stream_xor_mode),
       .agu_dmem_req_i(agu_dmem_req),
       .agu_dmem_we_i(agu_dmem_we),
       .agu_dmem_addr_i(agu_dmem_addr),
