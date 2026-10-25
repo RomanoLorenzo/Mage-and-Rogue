@@ -1,5 +1,7 @@
 #ifndef _MAGE_H_
 #define _MAGE_H_
+// MAGE_CFG_HJSON = ${mage_cfg_file}
+#define MAGE_CFG_HJSON "${mage_cfg_file}"
 
 #include <stdint.h>
 

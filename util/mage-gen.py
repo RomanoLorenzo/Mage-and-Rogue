@@ -580,6 +580,20 @@ def main():
         "fu_variants"                      : streaming_params.get('fu_variants', []),
     }
 
+    # Normalize config path relative to project root for tracking in software headers
+    cfg_file_path = pathlib.Path(args.mage_cfg.name).resolve()
+    mage_root = pathlib.Path(__file__).resolve().parent.parent
+    proj_root = mage_root.parent.parent
+    try:
+        rel_to_proj = cfg_file_path.relative_to(proj_root)
+        kwargs["mage_cfg_file"] = str(rel_to_proj)
+    except ValueError:
+        try:
+            rel_to_mage = cfg_file_path.relative_to(mage_root)
+            kwargs["mage_cfg_file"] = f"ips/Mage-and-Rogue/{rel_to_mage}"
+        except ValueError:
+            kwargs["mage_cfg_file"] = str(cfg_file_path)
+
     ###########
     #   TPL   #
     ###########
