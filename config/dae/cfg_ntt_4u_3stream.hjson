@@ -3,13 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
 //
 // File: cfg_ntt_4u_3stream.hjson
-// Description: Configuration file for Mage Radix-2 NTT testing with 4 parallel computing units
-//              Stream 0 (Ping): 8 banks, 8 AGEs
-//              Stream 1 (Pong): 8 banks, 8 AGEs
-//              Stream 2 (Zetas): 4 banks, 4 AGEs
+// Description: Configuration file for Mage Radix-2 NTT with 4 computing units (8x4 PEA) and 3 streams.
+//              Stream 0 (Ping):  8 banks, 8 AGEs (AGE 0..7)
+//              Stream 1 (Pong):  8 banks, 8 AGEs (AGE 8..15)
+//              Stream 2 (Zetas): 4 banks, 4 AGEs (AGE 16..19)
 
 {
-
     dae_cgra : 1,
     streaming_cgra : 0,
 
@@ -22,8 +21,8 @@
 
     common_params: {
         kernel_len : 1,
-        n_pea_rows: 4,
-        n_pea_cols: 2,
+        n_pea_rows: 8,
+        n_pea_cols: 4,
         n_neigh_pe: 8,
         pattern_neigh_pe: ["UP", "LEFT", "RIGHT", "DOWN", "NW", "NE", "SE", "SW"],
     },
@@ -32,14 +31,18 @@
         n_age_tot : 20,
         n_age_per_stream : 8,
         n_streams : 3,
-        n_pe_in_mem : 5,
+        n_pe_in_mem : 3,
         n_age_per_stream_ds : [8, 8, 4],
         acc_pes : [],
         pea_in_mem_placement : [
-            [0, 4, 8, 12, 16],
-            [1, 5, 9, 13, 17],
-            [2, 6, 10, 14, 18],
-            [3, 7, 11, 15, 19]
+            [0, 8, 16],
+            [1, 9, 16],
+            [2, 10, 17],
+            [3, 11, 17],
+            [4, 12, 18],
+            [5, 13, 18],
+            [6, 14, 19],
+            [7, 15, 19]
         ],
         num_words : 1024,
     },

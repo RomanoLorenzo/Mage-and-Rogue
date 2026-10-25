@@ -520,8 +520,8 @@ module mage_top
   )  xbar_pea_banks_4x4_stream_${s} (
       .out_pea_i      ({pea_outputs[${idx+3}],      pea_outputs[${idx+2}],      pea_outputs[${idx+1}],      pea_outputs[${idx}]}),
       .out_dmem_i     ({dmem_rdata_i[${idx+3}],     dmem_rdata_i[${idx+2}],     dmem_rdata_i[${idx+1}],     dmem_rdata_i[${idx}]}),
-      .sel_dmem_pea_i ({cfg_sel_dmem_pea[${idx+3}], cfg_sel_dmem_pea[${idx+2}], cfg_sel_dmem_pea[${idx+1}], cfg_sel_dmem_pea[${idx}]}),
-      .sel_pea_dmem_i ({pea_dmem_sel[${idx+3}],     pea_dmem_sel[${idx+2}],     pea_dmem_sel[${idx+1}],     pea_dmem_sel[${idx}]}),
+      .sel_dmem_pea_i ({cfg_sel_dmem_pea[${idx+3}][1:0], cfg_sel_dmem_pea[${idx+2}][1:0], cfg_sel_dmem_pea[${idx+1}][1:0], cfg_sel_dmem_pea[${idx}][1:0]}),
+      .sel_pea_dmem_i ({pea_dmem_sel[${idx+3}][1:0],     pea_dmem_sel[${idx+2}][1:0],     pea_dmem_sel[${idx+1}][1:0],     pea_dmem_sel[${idx}][1:0]}),
       .in_pea_o       ({pea_inputs[${idx+3}],       pea_inputs[${idx+2}],       pea_inputs[${idx+1}],       pea_inputs[${idx}]}),
       .in_dmem_o      ()
   );
@@ -530,10 +530,10 @@ module mage_top
     dmem_pea_select #(
       .N_AGE(4)
     ) dmem_pea_select_4x4_n${j}_stream_${s} (
-        .reg_load_age_sel_i(load_age_sel[${idx+j}]),
+        .reg_load_age_sel_i(load_age_sel[${idx+j}][1:0]),
         .age_bank_load_i   ({agu_bank_ls[${idx+3}][1:0], agu_bank_ls[${idx+2}][1:0], agu_bank_ls[${idx+1}][1:0], agu_bank_ls[${idx}][1:0]}),
         .valid_ls_i        ({agu_valid_ls[${idx+3}],   agu_valid_ls[${idx+2}],   agu_valid_ls[${idx+1}],   agu_valid_ls[${idx}]}),
-        .sel_load_stream_o (cfg_sel_dmem_pea[${idx+j}]),
+        .sel_load_stream_o (cfg_sel_dmem_pea[${idx+j}][1:0]),
         .valid_o(pea_data_valid[${idx+j}])
     );
   %endfor
